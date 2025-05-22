@@ -1,103 +1,69 @@
-import Image from "next/image";
+'use client'
+
+import Image from 'next/image'
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="space-y-8">
+      {/* Social Media Feed/Timeline */}
+      <div className="space-y-6">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="rounded-lg border border-border overflow-hidden bg-card shadow-sm">
+            {/* Post Header */}
+            <div className="flex items-center gap-3 p-4 border-b border-border">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted overflow-hidden">
+                <Image
+                  src={`/placeholder.svg?height=40&width=40&text=P${i}`}
+                  alt={`Poet ${i}`}
+                  width={40}
+                  height={40}
+                />
+              </div>
+              <div>
+                <h3 className="font-medium text-sm">Famous Poet {i}</h3>
+                <p className="text-xs text-muted-foreground">{i * 2} hours ago</p>
+              </div>
+            </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            {/* Post Content */}
+            <div className="p-5">
+              <p className="text-sm mb-4 whitespace-pre-line">
+                {i % 2 === 0
+                  ? "The moon hangs like a crescent blade,\nCutting through the velvet night.\nStars scatter like diamond dust,\nIn the wake of its silver light."
+                  : "In the garden of my heart,\nMemories bloom like wildflowers.\nSome sweet as morning dew,\nOthers sharp as thorns."}
+              </p>
+
+              {i % 3 === 0 && (
+                <div className="h-48 bg-muted rounded-md mb-4 flex items-center justify-center overflow-hidden">
+                  <Image
+                    src={`/placeholder.svg?height=192&width=500&text=Poem+Image+${i}`}
+                    alt="Poem illustration"
+                    width={500}
+                    height={192}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Post Tags */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {["Poetry", i % 2 === 0 ? "Nature" : "Love", i % 3 === 0 ? "Life" : "Philosophy"].map((tag) => (
+                  <span key={tag} className="px-2 py-1 text-xs rounded-md bg-accent/50 text-accent-foreground">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Post Actions */}
+            <div className="flex border-t border-border">
+              <button className="flex-1 p-3 text-sm font-medium hover:bg-accent/50 transition-colors">Like</button>
+              <button className="flex-1 p-3 text-sm font-medium hover:bg-accent/50 transition-colors">Comment</button>
+              <button className="flex-1 p-3 text-sm font-medium hover:bg-accent/50 transition-colors">Share</button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
-  );
+  )
 }
