@@ -1,72 +1,72 @@
-'use client'
+"use client";
 
-import type React from 'react'
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Home, Compass, User, BookOpen, Feather, BookText, Settings, Moon, Sun, Search } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { useSession, signIn, signOut } from 'next-auth/react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { useMobile } from '@/hooks/use-mobile'
-import { useUserStore } from '@/store/user-store'
+import type React from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Home, Compass, User, BookOpen, Feather, BookText, Settings, Moon, Sun, Search } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useMobile } from "@/hooks/use-mobile";
+import { useUserStore } from "@/store/user-store";
 
 interface NavigationProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function Navigation({ children }: NavigationProps) {
-  const pathname = usePathname()
-  const [showSidebar, setShowSidebar] = useState(false)
-  const { theme, setTheme } = useTheme()
-  const isMobile = useMobile()
-  const [lastScrollY, setLastScrollY] = useState(0)
-  const [hideBottomNav, setHideBottomNav] = useState(false)
-  const { data: session, status } = useSession()
-  const { userData, fetchUserData } = useUserStore()
+  const pathname = usePathname();
+  const [showSidebar, setShowSidebar] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const isMobile = useMobile();
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [hideBottomNav, setHideBottomNav] = useState(false);
+  const { data: session, status } = useSession();
+  const { userData, fetchUserData } = useUserStore();
 
   // Navigation items
   const navItems = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Explore', href: '/explore', icon: Compass },
-    { name: 'Profile', href: '/profile', icon: User },
-    { name: 'Sher', href: '/sher', icon: BookOpen },
-    { name: 'Ghazal', href: '/ghazal', icon: Feather },
-    { name: 'Nazm', href: '/nazm', icon: BookText },
-    { name: 'Settings', href: '/settings', icon: Settings },
-  ]
+    { name: "Home", href: "/", icon: Home },
+    { name: "Explore", href: "/explore", icon: Compass },
+    { name: "Poet", href: "/Poet", icon: User },
+    { name: "Sher", href: "/sher", icon: BookOpen },
+    { name: "Ghazal", href: "/ghazal", icon: Feather },
+    { name: "Nazm", href: "/nazm", icon: BookText },
+    { name: "Settings", href: "/settings", icon: Settings },
+  ];
 
-  const bottomNavItems = navItems.slice(0, 4)
+  const bottomNavItems = navItems.slice(0, 4);
 
   // Fetch user data when signed in
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
-      fetchUserData()
+    if (status === "authenticated" && session?.user?.id) {
+      fetchUserData();
     }
-  }, [status, session, fetchUserData])
+  }, [status, session, fetchUserData]);
 
   // Handle scroll for mobile bottom nav
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY
+      const currentScrollY = window.scrollY;
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setHideBottomNav(true)
+        setHideBottomNav(true);
       } else {
-        setHideBottomNav(false)
+        setHideBottomNav(false);
       }
-      setLastScrollY(currentScrollY)
-    }
+      setLastScrollY(currentScrollY);
+    };
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -77,20 +77,20 @@ export default function Navigation({ children }: NavigationProps) {
             {/* Left: Profile Icon or Sign In */}
             <Sheet open={showSidebar} onOpenChange={setShowSidebar}>
               <SheetTrigger asChild>
-                {status === 'authenticated' && userData ? (
+                {status === "authenticated" && userData ? (
                   <Link href="/profile">
                     <Button variant="ghost" size="icon" className="relative">
                       <Avatar className="h-8 w-8">
                         <AvatarImage
-                          src={userData.profilePicture?.url || '/placeholder.svg?height=32&width=32'}
-                          alt="Profile"
+                          src={userData.profilePicture?.url || "/placeholder.svg?height=32&width=32"}
+                          alt={userData.name || "User"}
                         />
-                        <AvatarFallback>{userData.name[0]}</AvatarFallback>
+                        <AvatarFallback>{userData.name?.[0] || "U"}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </Link>
                 ) : (
-                  <Button variant="ghost" onClick={() => signIn('google')}>
+                  <Button variant="ghost" onClick={() => signIn("google", { callbackUrl: "/profile" })}>
                     Sign In
                   </Button>
                 )}
@@ -99,15 +99,15 @@ export default function Navigation({ children }: NavigationProps) {
                 <div className="flex flex-col h-full bg-background">
                   {/* User Profile Info in Sidebar */}
                   <div className="p-4 border-b border-border">
-                    {status === 'authenticated' && userData ? (
+                    {status === "authenticated" && userData ? (
                       <>
                         <Link href="/profile" className="flex items-center gap-3 mb-4">
                           <Avatar className="h-16 w-16">
                             <AvatarImage
-                              src={userData.profilePicture?.url || '/placeholder.svg?height=64&width=64'}
-                              alt="Profile"
+                              src={userData.profilePicture?.url || "/placeholder.svg?height=64&width=64"}
+                              alt={userData.name || "User"}
                             />
-                            <AvatarFallback>{userData.name[0]}</AvatarFallback>
+                            <AvatarFallback>{userData.name?.[0] || "U"}</AvatarFallback>
                           </Avatar>
                           <div>
                             <h3 className="font-medium">{userData.name}</h3>
@@ -116,26 +116,30 @@ export default function Navigation({ children }: NavigationProps) {
                         </Link>
                         <div className="flex justify-between mt-2">
                           <div className="text-center">
-                            <p className="font-medium">{userData.followingCount}</p>
+                            <p className="font-medium">{userData.followingCount ?? 0}</p>
                             <p className="text-xs text-muted-foreground">Following</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium">{userData.followerCount}</p>
+                            <p className="font-medium">{userData.followerCount ?? 0}</p>
                             <p className="text-xs text-muted-foreground">Followers</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium">{userData.poemCount}</p>
+                            <p className="font-medium">{userData.poemCount ?? 0}</p>
                             <p className="text-xs text-muted-foreground">Poems</p>
                           </div>
                         </div>
-                        <Button variant="outline" className="w-full mt-4" onClick={() => signOut()}>
+                        <Button variant="outline" className="w-full mt-4" onClick={() => signOut({ callbackUrl: "/" })}>
                           Sign Out
                         </Button>
                       </>
                     ) : (
                       <div>
                         <p className="text-sm text-muted-foreground">Please sign in to view your profile.</p>
-                        <Button variant="outline" className="w-full mt-4" onClick={() => signIn('google')}>
+                        <Button
+                          variant="outline"
+                          className="w-full mt-4"
+                          onClick={() => signIn("google", { callbackUrl: "/profile" })}
+                        >
                           Sign In with Google
                         </Button>
                       </div>
@@ -150,12 +154,12 @@ export default function Navigation({ children }: NavigationProps) {
                           <Link
                             href={item.href}
                             className={cn(
-                              'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                               pathname === item.href
-                                ? theme === 'dark'
-                                  ? 'bg-white/10 text-white'
-                                  : 'bg-[#0a1929]/10 text-[#0a1929]'
-                                : 'hover:bg-accent',
+                                ? theme === "dark"
+                                  ? "bg-white/10 text-white"
+                                  : "bg-[#0a1929]/10 text-[#0a1929]"
+                                : "hover:bg-accent"
                             )}
                             onClick={() => setShowSidebar(false)}
                           >
@@ -169,7 +173,7 @@ export default function Navigation({ children }: NavigationProps) {
 
                   <div className="p-4 border-t border-border">
                     <Button variant="outline" className="w-full" onClick={toggleTheme}>
-                      {theme === 'dark' ? (
+                      {theme === "dark" ? (
                         <>
                           <Sun className="h-4 w-4 mr-2" /> Light Mode
                         </>
@@ -186,12 +190,12 @@ export default function Navigation({ children }: NavigationProps) {
 
             {/* Middle: Logo */}
             <Link href="/" className="flex items-center justify-center">
-              <Feather className={cn('h-6 w-6', theme === 'dark' ? 'text-white' : 'text-[#0a1929]')} />
+              <Feather className={cn("h-6 w-6", theme === "dark" ? "text-white" : "text-[#0a1929]")} />
             </Link>
 
             {/* Right: Theme Toggle */}
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
           </div>
         </header>
@@ -203,25 +207,25 @@ export default function Navigation({ children }: NavigationProps) {
           {/* Left Sidebar */}
           <aside className="fixed top-0 bottom-0 w-[240px] left-[calc(50%-640px)] border-r border-border bg-background flex flex-col py-4 z-10">
             <Link href="/" className="flex items-center gap-3 px-6 mb-8">
-              <Feather className={cn('h-5 w-5', theme === 'dark' ? 'text-white' : 'text-[#0a1929]')} />
+              <Feather className={cn("h-5 w-5", theme === "dark" ? "text-white" : "text-[#0a1929]")} />
               <span className="text-sm font-semibold">Unmatched Lines</span>
             </Link>
 
             {/* Profile Section */}
             <div className="px-7 mb-4">
-              {status === 'authenticated' && userData ? (
+              {status === "authenticated" && userData ? (
                 <Link href="/profile" className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={userData.profilePicture?.url || '/placeholder.svg?height=32&width=32'}
-                      alt="Profile"
+                      src={userData.profilePicture?.url || "/placeholder.svg?height=32&width=32"}
+                      alt={userData.name || "User"}
                     />
-                    <AvatarFallback>{userData.name[0]}</AvatarFallback>
+                    <AvatarFallback>{userData.name?.[0] || "U"}</AvatarFallback>
                   </Avatar>
                   <h4 className="font-medium text-sm">{userData.name}</h4>
                 </Link>
               ) : (
-                <Button variant="outline" className="w-full" onClick={() => signIn('google')}>
+                <Button variant="outline" className="w-full" onClick={() => signIn("google", { callbackUrl: "/profile" })}>
                   Sign In with Google
                 </Button>
               )}
@@ -234,12 +238,12 @@ export default function Navigation({ children }: NavigationProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-colors',
+                        "flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-colors",
                         pathname === item.href
-                          ? theme === 'dark'
-                            ? 'bg-white/10 text-white'
-                            : 'bg-[#0a1929]/10 text-[#0a1929]'
-                          : 'hover:bg-accent text-muted-foreground hover:text-foreground',
+                          ? theme === "dark"
+                            ? "bg-white/10 text-white"
+                            : "bg-[#0a1929]/10 text-[#0a1929]"
+                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <item.icon className="h-5 w-5" />
@@ -252,7 +256,7 @@ export default function Navigation({ children }: NavigationProps) {
 
             <div className="px-4 mt-auto">
               <Button variant="outline" className="w-full justify-start gap-3" onClick={toggleTheme}>
-                {theme === 'dark' ? (
+                {theme === "dark" ? (
                   <>
                     <Sun className="h-5 w-5" /> Light Mode
                   </>
@@ -318,14 +322,14 @@ export default function Navigation({ children }: NavigationProps) {
               <div className="mt-6">
                 <h3 className="font-semibold mb-3">Categories</h3>
                 <div className="flex flex-wrap gap-2">
-                  {['Love', 'Nature', 'Life', 'Philosophy', 'Spirituality', 'Sadness'].map((tag) => (
+                  {["Love", "Nature", "Life", "Philosophy", "Spirituality", "Sadness"].map((tag) => (
                     <span
                       key={tag}
                       className={cn(
-                        'px-3 py-1 text-xs rounded-full transition-colors cursor-pointer',
-                        theme === 'dark'
-                          ? 'bg-white/10 text-white hover:bg-white/20'
-                          : 'bg-[#0a1929]/10 text-[#0a1929] hover:bg-[#0a1929]/20',
+                        "px-3 py-1 text-xs rounded-full transition-colors cursor-pointer",
+                        theme === "dark"
+                          ? "bg-white/10 text-white hover:bg-white/20"
+                          : "bg-[#0a1929]/10 text-[#0a1929] hover:bg-[#0a1929]/20"
                       )}
                     >
                       {tag}
@@ -346,8 +350,8 @@ export default function Navigation({ children }: NavigationProps) {
       {isMobile && (
         <nav
           className={cn(
-            'fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background/80 backdrop-blur-md z-50 md:hidden transition-transform duration-300',
-            hideBottomNav ? 'translate-y-full' : 'translate-y-0',
+            "fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background/80 backdrop-blur-md z-50 md:hidden transition-transform duration-300",
+            hideBottomNav ? "translate-y-full" : "translate-y-0"
           )}
         >
           <div className="grid grid-cols-4 h-full">
@@ -356,12 +360,12 @@ export default function Navigation({ children }: NavigationProps) {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1',
+                  "flex flex-col items-center justify-center gap-1",
                   pathname === item.href
-                    ? theme === 'dark'
-                      ? 'text-white'
-                      : 'text-[#0a1929]'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? theme === "dark"
+                      ? "text-white"
+                      : "text-[#0a1929]"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -372,5 +376,5 @@ export default function Navigation({ children }: NavigationProps) {
         </nav>
       )}
     </div>
-  )
+  );
 }

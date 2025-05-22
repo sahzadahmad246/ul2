@@ -60,10 +60,7 @@ UserSchema.pre("save", function (next) {
   next();
 });
 
-// Indexes
-UserSchema.index({ email: 1 });
-UserSchema.index({ googleId: 1 });
-UserSchema.index({ roles: 1 });
+
 
 const User: Model<IUser> = mongoose.models.User || model<IUser>("User", UserSchema);
 

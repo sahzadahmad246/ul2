@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { connectToDatabase } from "@/lib/mongodb";
+import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { authOptions } from "@/lib/auth";
 import { IUser } from "@/types/userTypes";
@@ -15,7 +15,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const ALLOWED_INTERESTS = ["love", "nature", "history", "philosophy"] as const;
+const ALLOWED_INTERESTS = ["love", "nature", "history", "philosophy", "spirituality", "life"] as const;
 
 // Validation schema for profile updates including image
 const profileUpdateSchema = z
@@ -25,6 +25,7 @@ const profileUpdateSchema = z
     dob: z
       .string()
       .refine((val) => !val || !isNaN(Date.parse(val)), { message: "Invalid date of birth" })
+      .refine((val) => !val || new Date(val) <= new Date(), { message: "Date of birth cannot be in the future" })
       .transform((val) => (val ? new Date(val) : undefined))
       .optional(),
     dateOfDeath: z
@@ -38,7 +39,8 @@ const profileUpdateSchema = z
       .instanceof(File)
       .refine((file) => file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" })
       .refine((file) => ["image/jpeg", "image/png"].includes(file.type), { message: "Only JPEG or PNG images are allowed" })
-      .optional(),
+      .optional()
+      .nullable(),
   })
   .refine(
     (data) => {
@@ -56,7 +58,7 @@ interface FormDataObject {
 
 export async function PUT(req: NextRequest) {
   try {
-    await connectToDatabase();
+    await dbConnect();
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -67,7 +69,11 @@ export async function PUT(req: NextRequest) {
     const body: FormDataObject = {};
     formData.forEach((value, key) => {
       if (key === "interests") {
-        body[key] = typeof value === "string" ? JSON.parse(value) : value;
+        try {
+          body[key] = typeof value === "string" ? JSON.parse(value) : value;
+        } catch {
+          // Silently handle parsing error
+        }
       } else if (key !== "image") {
         body[key] = value;
       }
@@ -89,36 +95,45 @@ export async function PUT(req: NextRequest) {
     if (validatedData.location) updates.location = validatedData.location;
     if (validatedData.interests) updates.interests = validatedData.interests;
 
-    // Handle image upload
     if (validatedData.image) {
-      // Delete old image from Cloudinary if it exists
-      if (user.profilePicture?.publicId) {
-        await cloudinary.uploader.destroy(user.profilePicture.publicId);
-      }
-
-      // Upload new image to Cloudinary
-      const buffer = Buffer.from(await validatedData.image.arrayBuffer());
-      const stream = Readable.from(buffer);
-      const uploadResult = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: "unmatchedlines/profiles", resource_type: "image" },
-          (error, result) => {
-            if (error || !result) reject(error || new Error("Upload failed"));
-            else resolve({ secure_url: result.secure_url, public_id: result.public_id });
+      try {
+        // Delete old image from Cloudinary if it exists
+        if (user.profilePicture?.publicId) {
+          const destroyResult = await cloudinary.uploader.destroy(user.profilePicture.publicId, {
+            resource_type: "image",
+          });
+          if (destroyResult.result !== "ok") {
+            throw new Error("Failed to delete previous image from Cloudinary");
           }
-        );
-        stream.pipe(uploadStream);
-      });
+        }
 
-      updates.profilePicture = {
-        url: uploadResult.secure_url,
-        publicId: uploadResult.public_id,
-      };
+        // Upload new image to Cloudinary
+        const buffer = Buffer.from(await validatedData.image.arrayBuffer());
+        const stream = Readable.from(buffer);
+        const uploadResult = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: "unmatchedlines/profiles", resource_type: "image" },
+            (error, result) => {
+              if (error || !result) reject(error || new Error("Upload failed"));
+              else resolve({ secure_url: result.secure_url, public_id: result.public_id });
+            }
+          );
+          stream.pipe(uploadStream);
+        });
+
+        updates.profilePicture = {
+          url: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to process image";
+        return NextResponse.json({ message: "Image upload error", error: message }, { status: 500 });
+      }
     }
 
     await User.updateOne({ _id: session.user.id }, { $set: updates });
 
-    const updatedUser = await User.findById(session.user.id);
+    const updatedUser = await User.findById(session.user.id).lean();
     return NextResponse.json({ message: "Profile updated successfully", user: updatedUser });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
@@ -126,5 +141,24 @@ export async function PUT(req: NextRequest) {
     }
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ message: "Server error", error: message }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await dbConnect();
+    const user = await User.findOne({ email: session.user.email }).lean();
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch {
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

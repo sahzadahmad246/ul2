@@ -1,11 +1,12 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useSession, signOut } from "next-auth/react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { signIn } from "next-auth/react";
 import {
   MapPin,
   Calendar,
@@ -17,9 +18,9 @@ import {
   ChevronDown,
   ChevronUp,
   ImageIcon,
-} from "lucide-react"
-import { useUserStore } from "@/store/user-store"
-import ProfileFormDialog from "@/components/user/ProfileForm"
+} from "lucide-react";
+import { useUserStore } from "@/store/user-store";
+import ProfileFormDialog from "@/components/user/ProfileForm";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,26 +37,25 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogFooter
-} from "@/components/ui/alert-dialog"
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
 
 export default function Profile() {
-  const { data: session, status } = useSession()
-  const { userData, loading, fetchUserData } = useUserStore()
-  const [isEditing, setIsEditing] = useState(false)
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [showProfilePicture, setShowProfilePicture] = useState(false)
-  const [showAllInterests, setShowAllInterests] = useState(false)
+  const { data: session, status } = useSession();
+  const { userData, loading, fetchUserData } = useUserStore();
+  const [isEditing, setIsEditing] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showProfilePicture, setShowProfilePicture] = useState(false);
+  const [showAllInterests, setShowAllInterests] = useState(false);
+  const [activeTab, setActiveTab] = useState(userData?.roles?.includes("poet") ? "poems" : "likes");
 
-  // Only fetch user data when component mounts or session changes
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.id) {
-      fetchUserData()
+    if (status === "authenticated" && session?.user?.id && !userData) {
+      fetchUserData(); // Only fetch if no userData
     }
-  }, [status, session?.user?.id, fetchUserData])
+  }, [status, session?.user?.id, userData, fetchUserData]);
 
-  // Optimized loader that only shows on initial load
-  if ((status === "loading" || loading) && !userData) {
+  if (status === "loading" || loading) {
     return (
       <div className="max-w-3xl mx-auto p-4 space-y-8 animate-pulse">
         <div className="h-48 bg-muted rounded-lg"></div>
@@ -69,42 +69,41 @@ export default function Profile() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!session?.user?.id || !userData) {
+  if (status === "unauthenticated" || !session?.user?.id) {
     return (
       <div className="max-w-3xl mx-auto p-4">
         <Card>
           <CardContent className="p-8 text-center">
             <h2 className="text-xl font-semibold mb-2">Please sign in to view your profile</h2>
             <p className="text-muted-foreground mb-4">You need to be logged in to access this page</p>
-            <Button>Sign In</Button>
+            <Button onClick={() => signIn("google", { callbackUrl: "/profile" })}>
+              Sign In
+            </Button>
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
   const handleLogout = () => {
-    setShowLogoutConfirm(true)
-  }
+    setShowLogoutConfirm(true);
+  };
 
   const confirmLogout = () => {
-    signOut()
-  }
+    signOut({ callbackUrl: "/" });
+  };
 
-  // Determine if user is a poet based on roles array
-  const isPoet = userData.roles?.includes("poet") || false
+  const isPoet = userData?.roles?.includes("poet") || false;
 
-  // Display limited interests with option to show more
-  const displayedInterests = showAllInterests ? userData.interests : (userData.interests || []).slice(0, 5)
-
-  const hasMoreInterests = (userData.interests || []).length > 5
+  const displayedInterests = showAllInterests ? userData?.interests : (userData?.interests || []).slice(0, 5);
+  const hasMoreInterests = (userData?.interests || []).length > 5;
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Cover Image - Made taller for Twitter-like appearance */}
+      {/* Cover Image */}
       <div className="h-48 bg-gradient-to-r from-blue-600 to-violet-600 rounded-t-lg relative">
         <div className="absolute inset-0 bg-black/10 rounded-t-lg"></div>
       </div>
@@ -112,24 +111,22 @@ export default function Profile() {
       {/* Profile Header */}
       <div className="px-4 bg-background rounded-b-lg shadow-sm pb-4">
         <div className="relative pt-2">
-          {/* Avatar positioned to overlap the cover image - larger size */}
           <button
             onClick={() => setShowProfilePicture(true)}
             className="group relative h-24 w-24 rounded-full border-4 border-background absolute -top-12 left-4 overflow-hidden"
           >
             <Avatar className="h-full w-full">
               <AvatarImage
-                src={userData.profilePicture?.url || "/placeholder.svg?height=96&width=96"}
-                alt={userData.name}
+                src={userData?.profilePicture?.url || "/placeholder.svg?height=96&width=96"}
+                alt={userData?.name || "User"}
               />
-              <AvatarFallback className="text-2xl">{userData.name[0]}</AvatarFallback>
+              <AvatarFallback className="text-2xl">{userData?.name?.[0] || "U"}</AvatarFallback>
             </Avatar>
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <ImageIcon className="h-6 w-6 text-white" />
             </div>
           </button>
 
-          {/* Action buttons aligned closer to the avatar */}
           <div className="absolute right-4 top-8 flex gap-2">
             <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="gap-1">
               <Edit className="h-3.5 w-3.5" />
@@ -142,24 +139,21 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Name and Email - reduced margin to minimize space */}
         <div className="mt-2 mb-2">
-          <h1 className="text-xl font-bold">{userData.name}</h1>
-          <p className="text-sm text-muted-foreground">{userData.email}</p>
+          <h1 className="text-xl font-bold">{userData?.name || "Unknown"}</h1>
+          <p className="text-sm text-muted-foreground">{userData?.email || ""}</p>
         </div>
 
-        {/* Bio with Twitter-like styling */}
-        {userData.bio && <p className="text-sm mb-3 leading-relaxed">{userData.bio}</p>}
+        {userData?.bio && <p className="text-sm mb-3 leading-relaxed">{userData.bio}</p>}
 
-        {/* Location & DOB - compact inline display */}
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground mb-4">
-          {userData.location && (
+          {userData?.location && (
             <div className="flex items-center gap-1">
               <MapPin className="h-3.5 w-3.5" />
               <span>{userData.location}</span>
             </div>
           )}
-          {userData.dob && (
+          {userData?.dob && (
             <div className="flex items-center gap-1">
               <Calendar className="h-3.5 w-3.5" />
               <span>Born {new Date(userData.dob).toLocaleDateString()}</span>
@@ -167,30 +161,28 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Stats - Twitter-like compact display */}
         <div className="flex gap-6 text-sm mb-4">
           <div className="flex items-center gap-1 hover:underline cursor-pointer">
-            <span className="font-semibold">{userData.followingCount ?? 0}</span>
+            <span className="font-semibold">{userData?.followingCount ?? 0}</span>
             <span className="text-muted-foreground">Following</span>
           </div>
           <div className="flex items-center gap-1 hover:underline cursor-pointer">
-            <span className="font-semibold">{userData.followerCount ?? 0}</span>
+            <span className="font-semibold">{userData?.followerCount ?? 0}</span>
             <span className="text-muted-foreground">Followers</span>
           </div>
           {isPoet && (
             <div className="flex items-center gap-1 hover:underline cursor-pointer">
-              <span className="font-semibold">{userData.poemCount ?? 0}</span>
+              <span className="font-semibold">{userData?.poemCount ?? 0}</span>
               <span className="text-muted-foreground">Poems</span>
             </div>
           )}
         </div>
 
-        {/* Interests - styled like Twitter tags with see more button */}
-        {userData.interests && userData.interests.length > 0 && (
+        {userData?.interests && userData.interests.length > 0 && (
           <div className="mb-6">
             <h3 className="text-sm font-medium mb-2">Interests</h3>
             <div className="flex flex-wrap gap-2 mb-2">
-              {displayedInterests?.map((interest) => (
+              {displayedInterests?.map((interest: string) => (
                 <span
                   key={interest}
                   className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium capitalize hover:bg-primary/20 transition-colors cursor-pointer"
@@ -220,8 +212,7 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Tabs for Content - Only show poems tab for poets */}
-        <Tabs defaultValue={isPoet ? "poems" : "likes"} className="mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList
             className="grid w-full"
             style={{
@@ -235,7 +226,7 @@ export default function Profile() {
 
           {isPoet && (
             <TabsContent value="poems" className="space-y-4 mt-4">
-              {(userData.poemCount ?? 0) > 0 ? (
+              {(userData?.poemCount ?? 0) > 0 ? (
                 <div className="grid gap-4">
                   {[...Array(3)].map((_, i) => (
                     <Card key={i} className="overflow-hidden hover:bg-muted/30 transition-colors cursor-pointer">
@@ -243,14 +234,14 @@ export default function Profile() {
                         <div className="flex items-start gap-3">
                           <Avatar className="h-10 w-10 mt-1">
                             <AvatarImage
-                              src={userData.profilePicture?.url || "/placeholder.svg?height=40&width=40"}
-                              alt={userData.name}
+                              src={userData?.profilePicture?.url || "/placeholder.svg?height=40&width=40"}
+                              alt={userData?.name || "User"}
                             />
-                            <AvatarFallback>{userData.name[0]}</AvatarFallback>
+                            <AvatarFallback>{userData?.name?.[0] || "U"}</AvatarFallback>
                           </Avatar>
                           <div>
                             <div className="flex items-center gap-1">
-                              <span className="font-medium">{userData.name}</span>
+                              <span className="font-medium">{userData?.name || "Unknown"}</span>
                               <span className="text-xs text-muted-foreground">· 2d</span>
                             </div>
                             <p className="text-sm mt-1 leading-relaxed">
@@ -304,10 +295,8 @@ export default function Profile() {
         </Tabs>
       </div>
 
-      {/* Edit Profile Dialog */}
       <ProfileFormDialog open={isEditing} onOpenChange={setIsEditing} />
 
-      {/* Profile Picture Preview Dialog */}
       <Dialog open={showProfilePicture} onOpenChange={setShowProfilePicture}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -318,11 +307,11 @@ export default function Profile() {
             <div className="relative w-64 h-64 rounded-full overflow-hidden border">
               <Avatar className="h-full w-full">
                 <AvatarImage
-                  src={userData.profilePicture?.url || "/placeholder.svg?height=256&width=256"}
-                  alt={userData.name}
+                  src={userData?.profilePicture?.url || "/placeholder.svg?height=256&width=256"}
+                  alt={userData?.name || "User"}
                   className="object-cover"
                 />
-                <AvatarFallback className="text-6xl">{userData.name[0]}</AvatarFallback>
+                <AvatarFallback className="text-6xl">{userData?.name?.[0] || "U"}</AvatarFallback>
               </Avatar>
             </div>
           </div>
@@ -334,7 +323,6 @@ export default function Profile() {
         </DialogContent>
       </Dialog>
 
-      {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -353,5 +341,5 @@ export default function Profile() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }
