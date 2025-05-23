@@ -1,4 +1,6 @@
+// src/lib/validators.ts
 import { z } from "zod";
+import { Types } from "mongoose";
 
 const ALLOWED_INTERESTS = ["love", "nature", "history", "philosophy", "spirituality", "life"] as const;
 
@@ -39,6 +41,8 @@ export const updateProfileSchema = z
       .refine((file) => ["image/jpeg", "image/png"].includes(file.type), { message: "Only JPEG or PNG images are allowed" })
       .optional()
       .nullable(),
+    addBookmark: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }).optional(),
+    removeBookmark: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }).optional(),
   })
   .refine(
     (data) => {
@@ -50,5 +54,25 @@ export const updateProfileSchema = z
     { message: "Date of death must be after date of birth", path: ["dateOfDeath"] }
   );
 
+export const bookmarkSchema = z.object({
+  poemId: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }),
+});
+
+export const collectionSchema = z.object({
+  name: z.string().min(1, "Collection name is required").max(100, "Collection name cannot exceed 100 characters"),
+  description: z.string().max(500, "Collection description cannot exceed 500 characters").optional(),
+  poems: z
+    .array(z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }))
+    .optional(),
+});
+
+export const addPoemToCollectionSchema = z.object({
+  collectionId: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid collection ID" }),
+  poemId: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type BookmarkInput = z.infer<typeof bookmarkSchema>;
+export type CollectionInput = z.infer<typeof collectionSchema>;
+export type AddPoemToCollectionInput = z.infer<typeof addPoemToCollectionSchema>;

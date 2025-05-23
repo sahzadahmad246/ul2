@@ -22,6 +22,14 @@ export interface IUser {
   likedPoems: { poemId: Types.ObjectId }[];
   poems: { poemId: Types.ObjectId }[];
   poemCount: number;
+  bookmarks: { poemId: Types.ObjectId; bookmarkedAt: Date }[];
+  collections: {
+    name: string;
+    description?: string;
+    poems: Types.ObjectId[];
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
