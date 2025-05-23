@@ -1,32 +1,33 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Compass, User, BookOpen, Feather, BookText, Settings, Moon, Sun, Search } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useSession, signIn, signOut } from "next-auth/react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useMobile } from "@/hooks/use-mobile";
-import { useUserStore } from "@/store/user-store";
+import type React from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { Home, Compass, User, BookOpen, Feather, BookText, Settings, Moon, Sun, Search } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useSession, signIn, signOut } from "next-auth/react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useMobile } from "@/hooks/use-mobile"
+import { useUserStore } from "@/store/user-store"
 
 interface NavigationProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 export default function Navigation({ children }: NavigationProps) {
-  const pathname = usePathname();
-  const [showSidebar, setShowSidebar] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const isMobile = useMobile();
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [hideBottomNav, setHideBottomNav] = useState(false);
-  const { data: session, status } = useSession();
-  const { userData, fetchUserData } = useUserStore();
+  const pathname = usePathname()
+  const router = useRouter()
+  const [showSidebar, setShowSidebar] = useState(false)
+  const { theme, setTheme } = useTheme()
+  const isMobile = useMobile()
+  const [lastScrollY, setLastScrollY] = useState(0)
+  const [hideBottomNav, setHideBottomNav] = useState(false)
+  const { data: session, status } = useSession()
+  const { userData, fetchUserData } = useUserStore()
 
   // Navigation items
   const navItems = [
@@ -37,36 +38,42 @@ export default function Navigation({ children }: NavigationProps) {
     { name: "Ghazal", href: "/ghazal", icon: Feather },
     { name: "Nazm", href: "/nazm", icon: BookText },
     { name: "Settings", href: "/settings", icon: Settings },
-  ];
+  ]
 
-  const bottomNavItems = navItems.slice(0, 4);
+  const bottomNavItems = navItems.slice(0, 4)
 
   // Fetch user data when signed in
   useEffect(() => {
     if (status === "authenticated" && session?.user?.id) {
-      fetchUserData();
+      fetchUserData()
     }
-  }, [status, session, fetchUserData]);
+  }, [status, session, fetchUserData])
 
   // Handle scroll for mobile bottom nav
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      const currentScrollY = window.scrollY
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setHideBottomNav(true);
+        setHideBottomNav(true)
       } else {
-        setHideBottomNav(false);
+        setHideBottomNav(false)
       }
-      setLastScrollY(currentScrollY);
-    };
+      setLastScrollY(currentScrollY)
+    }
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [lastScrollY])
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
+    setTheme(theme === "dark" ? "light" : "dark")
+  }
+
+  // Handle profile navigation with sidebar closing
+  const handleProfileClick = () => {
+    setShowSidebar(false)
+    router.push("/profile")
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -77,23 +84,20 @@ export default function Navigation({ children }: NavigationProps) {
             {/* Left: Profile Icon or Sign In */}
             <Sheet open={showSidebar} onOpenChange={setShowSidebar}>
               <SheetTrigger asChild>
-                {status === "authenticated" && userData ? (
-                  <Link href="/profile">
-                    <Button variant="ghost" size="icon" className="relative">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={userData.profilePicture?.url || "/placeholder.svg?height=32&width=32"}
-                          alt={userData.name || "User"}
-                        />
-                        <AvatarFallback>{userData.name?.[0] || "U"}</AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button variant="ghost" onClick={() => signIn("google", { callbackUrl: "/profile" })}>
-                    Sign In
-                  </Button>
-                )}
+                <Button variant="ghost" size="icon" className="relative">
+                  <Avatar className="h-8 w-8">
+                    {status === "authenticated" && userData?.profilePicture?.url ? (
+                      <AvatarImage
+                        src={userData.profilePicture.url || "/placeholder.svg"}
+                        alt={userData.name || "User"}
+                      />
+                    ) : (
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[280px] p-0">
                 <div className="flex flex-col h-full bg-background">
@@ -101,7 +105,7 @@ export default function Navigation({ children }: NavigationProps) {
                   <div className="p-4 border-b border-border">
                     {status === "authenticated" && userData ? (
                       <>
-                        <Link href="/profile" className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-3 mb-4 cursor-pointer" onClick={handleProfileClick}>
                           <Avatar className="h-16 w-16">
                             <AvatarImage
                               src={userData.profilePicture?.url || "/placeholder.svg?height=64&width=64"}
@@ -109,11 +113,11 @@ export default function Navigation({ children }: NavigationProps) {
                             />
                             <AvatarFallback>{userData.name?.[0] || "U"}</AvatarFallback>
                           </Avatar>
-                          <div>
-                            <h3 className="font-medium">{userData.name}</h3>
-                            <p className="text-sm text-muted-foreground">{userData.email}</p>
+                          <div className="overflow-hidden">
+                            <h3 className="font-medium truncate">{userData.name}</h3>
+                            <p className="text-sm text-muted-foreground truncate">{userData.email}</p>
                           </div>
-                        </Link>
+                        </div>
                         <div className="flex justify-between mt-2">
                           <div className="text-center">
                             <p className="font-medium">{userData.followingCount ?? 0}</p>
@@ -159,7 +163,7 @@ export default function Navigation({ children }: NavigationProps) {
                                 ? theme === "dark"
                                   ? "bg-white/10 text-white"
                                   : "bg-[#0a1929]/10 text-[#0a1929]"
-                                : "hover:bg-accent"
+                                : "hover:bg-accent",
                             )}
                             onClick={() => setShowSidebar(false)}
                           >
@@ -222,10 +226,14 @@ export default function Navigation({ children }: NavigationProps) {
                     />
                     <AvatarFallback>{userData.name?.[0] || "U"}</AvatarFallback>
                   </Avatar>
-                  <h4 className="font-medium text-sm">{userData.name}</h4>
+                  <h4 className="font-medium text-sm truncate">{userData.name}</h4>
                 </Link>
               ) : (
-                <Button variant="outline" className="w-full" onClick={() => signIn("google", { callbackUrl: "/profile" })}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => signIn("google", { callbackUrl: "/profile" })}
+                >
                   Sign In with Google
                 </Button>
               )}
@@ -243,7 +251,7 @@ export default function Navigation({ children }: NavigationProps) {
                           ? theme === "dark"
                             ? "bg-white/10 text-white"
                             : "bg-[#0a1929]/10 text-[#0a1929]"
-                          : "hover:bg-accent text-muted-foreground hover:text-foreground"
+                          : "hover:bg-accent text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <item.icon className="h-5 w-5" />
@@ -329,7 +337,7 @@ export default function Navigation({ children }: NavigationProps) {
                         "px-3 py-1 text-xs rounded-full transition-colors cursor-pointer",
                         theme === "dark"
                           ? "bg-white/10 text-white hover:bg-white/20"
-                          : "bg-[#0a1929]/10 text-[#0a1929] hover:bg-[#0a1929]/20"
+                          : "bg-[#0a1929]/10 text-[#0a1929] hover:bg-[#0a1929]/20",
                       )}
                     >
                       {tag}
@@ -351,7 +359,7 @@ export default function Navigation({ children }: NavigationProps) {
         <nav
           className={cn(
             "fixed bottom-0 left-0 right-0 h-16 border-t border-border bg-background/80 backdrop-blur-md z-50 md:hidden transition-transform duration-300",
-            hideBottomNav ? "translate-y-full" : "translate-y-0"
+            hideBottomNav ? "translate-y-full" : "translate-y-0",
           )}
         >
           <div className="grid grid-cols-4 h-full">
@@ -365,7 +373,7 @@ export default function Navigation({ children }: NavigationProps) {
                     ? theme === "dark"
                       ? "text-white"
                       : "text-[#0a1929]"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -376,5 +384,5 @@ export default function Navigation({ children }: NavigationProps) {
         </nav>
       )}
     </div>
-  );
+  )
 }

@@ -5,9 +5,10 @@ import { IUser } from "@/types/userTypes";
 interface UserStore {
   userData: IUser | null;
   loading: boolean;
-  lastFetched: number | null; // Timestamp of last fetch
+  lastFetched: number | null;
   fetchUserData: (force?: boolean) => Promise<void>;
   updateUserData: (data: FormData) => Promise<{ success: boolean; message?: string }>;
+  clearUserData: () => void;
 }
 
 const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -22,14 +23,14 @@ export const useUserStore = create<UserStore>()(
       fetchUserData: async (force = false) => {
         const { userData, lastFetched } = get();
 
-        // Skip fetch if data is cached and not expired, unless forced
+        // Skip cache check if forced
         if (!force && userData && lastFetched && Date.now() - lastFetched < CACHE_DURATION) {
           return;
         }
 
         set({ loading: true });
         try {
-          const res = await fetch("/api/users/me"); // Fixed endpoint
+          const res = await fetch("/api/users/me");
           const data = await res.json();
           if (res.ok && data) {
             const userData: IUser = {
@@ -54,6 +55,8 @@ export const useUserStore = create<UserStore>()(
               likedPoems: data.likedPoems || [],
               poems: data.poems || [],
               poemCount: data.poemCount ?? 0,
+              bookmarks: data.bookmarks || [], // Add bookmarks
+              collections: data.collections || [], // Add collections
               createdAt: new Date(data.createdAt),
               updatedAt: new Date(data.updatedAt),
             };
@@ -86,6 +89,10 @@ export const useUserStore = create<UserStore>()(
         } catch {
           return { success: false, message: "An error occurred while updating profile" };
         }
+      },
+
+      clearUserData: () => {
+        set({ userData: null, lastFetched: null, loading: false });
       },
     }),
     {

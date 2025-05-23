@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { signIn } from "next-auth/react"
 import {
   MapPin,
   Calendar,
@@ -18,9 +18,9 @@ import {
   ChevronDown,
   ChevronUp,
   ImageIcon,
-} from "lucide-react";
-import { useUserStore } from "@/store/user-store";
-import ProfileFormDialog from "@/components/user/ProfileForm";
+} from "lucide-react"
+import { useUserStore } from "@/store/user-store"
+import ProfileFormDialog from "@/components/user/ProfileForm"
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,24 +38,81 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogFooter,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"
+import { useRouter } from "next/navigation"
 
 export default function Profile() {
-  const { data: session, status } = useSession();
-  const { userData, loading, fetchUserData } = useUserStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showProfilePicture, setShowProfilePicture] = useState(false);
-  const [showAllInterests, setShowAllInterests] = useState(false);
-  const [activeTab, setActiveTab] = useState(userData?.roles?.includes("poet") ? "poems" : "likes");
+  const router = useRouter()
+  const { data: session, status } = useSession()
+  const { userData, loading, fetchUserData, clearUserData } = useUserStore()
+  const [isEditing, setIsEditing] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showProfilePicture, setShowProfilePicture] = useState(false)
+  const [showAllInterests, setShowAllInterests] = useState(false)
+  const [activeTab, setActiveTab] = useState("likes")
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (status === "authenticated" && session?.user?.id && !userData) {
-      fetchUserData(); // Only fetch if no userData
+    // Set initial tab based on user role when userData is loaded
+    if (userData?.roles?.includes("poet")) {
+      setActiveTab("poems")
     }
-  }, [status, session?.user?.id, userData, fetchUserData]);
+  }, [userData])
 
-  if (status === "loading" || loading) {
+  useEffect(() => {
+    // Handle authentication and data loading
+    const handleAuth = async () => {
+      setIsLoading(true)
+
+      if (status === "authenticated" && session?.user?.id) {
+        try {
+          await fetchUserData(true)
+        } catch (error) {
+          console.error("Error fetching user data:", error)
+        }
+      } else if (status === "unauthenticated") {
+        clearUserData()
+        // Redirect to sign in page with callback
+        router.push("/auth/signin?callbackUrl=/profile")
+      }
+
+      setIsLoading(false)
+    }
+
+    handleAuth()
+  }, [status, session?.user?.id, fetchUserData, clearUserData, router])
+
+  // Handle logout to show confirmation dialog instantly
+  const handleLogout = () => {
+    setShowLogoutConfirm(true)
+  }
+
+  const confirmLogout = async () => {
+    try {
+      clearUserData()
+      await signOut({ callbackUrl: "/" })
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
+  }
+
+  // Show unauthenticated message if not logged in
+  if (status === "unauthenticated") {
+    return (
+      <div className="max-w-3xl mx-auto p-4">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <h2 className="text-xl font-semibold mb-2">Please sign in to view your profile</h2>
+            <p className="text-muted-foreground mb-4">You need to be logged in to access this page</p>
+            <Button onClick={() => signIn("google", { callbackUrl: "/profile" })}>Sign In</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show skeleton loader when loading
+  if (isLoading || loading || !userData) {
     return (
       <div className="max-w-3xl mx-auto p-4 space-y-8 animate-pulse">
         <div className="h-48 bg-muted rounded-lg"></div>
@@ -69,37 +126,12 @@ export default function Profile() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
-  if (status === "unauthenticated" || !session?.user?.id) {
-    return (
-      <div className="max-w-3xl mx-auto p-4">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">Please sign in to view your profile</h2>
-            <p className="text-muted-foreground mb-4">You need to be logged in to access this page</p>
-            <Button onClick={() => signIn("google", { callbackUrl: "/profile" })}>
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const handleLogout = () => {
-    setShowLogoutConfirm(true);
-  };
-
-  const confirmLogout = () => {
-    signOut({ callbackUrl: "/" });
-  };
-
-  const isPoet = userData?.roles?.includes("poet") || false;
-
-  const displayedInterests = showAllInterests ? userData?.interests : (userData?.interests || []).slice(0, 5);
-  const hasMoreInterests = (userData?.interests || []).length > 5;
+  const isPoet = userData?.roles?.includes("poet") || false
+  const displayedInterests = showAllInterests ? userData?.interests : (userData?.interests || []).slice(0, 5)
+  const hasMoreInterests = (userData?.interests || []).length > 5
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -341,5 +373,5 @@ export default function Profile() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

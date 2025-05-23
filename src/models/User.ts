@@ -41,6 +41,23 @@ const UserSchema = new Schema<IUser>(
       default: [],
     },
     poemCount: { type: Number, default: 0 },
+    bookmarks: {
+      type: [{
+        poemId: { type: Schema.Types.ObjectId, ref: "Poem", required: true },
+        bookmarkedAt: { type: Date, default: Date.now }
+      }],
+      default: [],
+    },
+    collections: {
+      type: [{
+        name: { type: String, required: true, trim: true, maxlength: [100, "Collection name cannot exceed 100 characters"] },
+        description: { type: String, trim: true, maxlength: [500, "Collection description cannot exceed 500 characters"] },
+        poems: [{ type: Schema.Types.ObjectId, ref: "Poem" }],
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now }
+      }],
+      default: [],
+    },
   },
   { timestamps: true }
 );
