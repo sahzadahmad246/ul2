@@ -12,7 +12,10 @@ export async function GET() {
     }
 
     await dbConnect();
-    const user = await User.findOne({ email: session.user.email }).lean();
+    const user = await User.findOne({ email: session.user.email })
+      .select("-roles") // Explicitly exclude roles
+      .lean();
+    
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }

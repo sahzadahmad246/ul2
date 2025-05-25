@@ -1,8 +1,10 @@
+// src/app/api/auth/[...nextauth]/route.ts
 import { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import type { JWT } from "next-auth/jwt";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
+import { slugifyUser } from "@/lib/slugify";
 
 // Define session and JWT types
 export interface SessionUser {
@@ -10,14 +12,16 @@ export interface SessionUser {
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  roles?: ("user" | "poet" | "admin")[];
+  role?: "user" | "poet" | "admin";
   profilePicture?: { url: string; publicId?: string | null } | null;
+  slug?: string;
 }
 
 export interface ExtendedJWT extends JWT {
   id?: string;
-  roles?: ("user" | "poet" | "admin")[];
+  role?: "user" | "poet" | "admin";
   profilePicture?: { url: string; publicId?: string | null } | null;
+  slug?: string;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -32,11 +36,9 @@ export const authOptions: NextAuthOptions = {
       if (account && user) {
         await dbConnect();
 
-        // Check if user exists in database
         const existingUser = await User.findOne({ email: user.email });
 
         if (existingUser) {
-          // Preserve existing name and profilePicture, only update googleId
           await User.updateOne(
             { email: user.email },
             {
@@ -45,44 +47,69 @@ export const authOptions: NextAuthOptions = {
               },
             }
           );
+
           return {
             ...token,
             id: existingUser._id.toString(),
-            roles: existingUser.roles,
+            role: existingUser.role,
             name: existingUser.name,
+            slug: existingUser.slug,
             profilePicture: existingUser.profilePicture
-              ? { url: existingUser.profilePicture.url ?? "", publicId: existingUser.profilePicture.publicId ?? null }
+              ? {
+                  url: existingUser.profilePicture.url ?? "",
+                  publicId: existingUser.profilePicture.publicId ?? null,
+                }
               : null,
           };
         } else {
-          // Create new user with Google data as fallback
-          const newUser = await User.create({
+          const baseSlug = slugifyUser(user.name || "unknown");
+          let slug = baseSlug;
+          let counter = 1;
+
+          while (await User.findOne({ slug })) {
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+          }
+
+          const newUserData = {
             googleId: account.providerAccountId,
-            email: user.email,
+            email: user.email || "unknown@example.com",
             name: user.name || "Unknown",
-            profilePicture: user.image ? { url: user.image, publicId: null } : undefined,
-            roles: ["user"],
+            slug,
+            profilePicture: user.image
+              ? { url: user.image, publicId: null }
+              : undefined,
+            role: "user", // Explicitly set role as string
             createdAt: new Date(),
             updatedAt: new Date(),
-          });
+          };
+
+          console.log("[Auth] Creating new user with data:", newUserData); // Debug log
+
+          const newUser = new User(newUserData);
+          await newUser.save();
+
+          console.log("[Auth] Saved user:", await User.findById(newUser._id)); // Debug log
 
           return {
             ...token,
             id: newUser._id.toString(),
-            roles: newUser.roles,
+            role: newUser.role,
             name: newUser.name,
+            slug: newUser.slug,
             profilePicture: newUser.profilePicture
-              ? { url: newUser.profilePicture.url ?? "", publicId: newUser.profilePicture.publicId ?? null }
+              ? {
+                  url: newUser.profilePicture.url ?? "",
+                  publicId: newUser.profilePicture.publicId ?? null,
+                }
               : null,
           };
         }
       }
 
-      // Return token for subsequent calls
       return token;
     },
     async session({ session, token }) {
-      // Add user data from MongoDB to session
       if (session.user && token) {
         await dbConnect();
         const dbUser = await User.findOne({ email: token.email }).lean();
@@ -92,17 +119,21 @@ export const authOptions: NextAuthOptions = {
             id: dbUser._id.toString(),
             email: dbUser.email,
             name: dbUser.name,
+            slug: dbUser.slug,
             profilePicture: dbUser.profilePicture
-              ? { url: dbUser.profilePicture.url ?? "", publicId: dbUser.profilePicture.publicId ?? null }
+              ? {
+                  url: dbUser.profilePicture.url ?? "",
+                  publicId: dbUser.profilePicture.publicId ?? null,
+                }
               : null,
-            roles: dbUser.roles,
+            role: dbUser.role,
           };
+          
         }
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Redirect to /profile after sign-in
       if (url.includes("callbackUrl")) {
         return `${baseUrl}/profile`;
       }

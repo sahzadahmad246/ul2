@@ -1,8 +1,8 @@
-// src/lib/validators.ts
+// src/balidatores/poemValidators.ts
 import { z } from "zod";
 import { Types } from "mongoose";
 
-// Define allowed categories and topics
+// Define allowed categories
 const ALLOWED_CATEGORIES = [
   "poem",
   "ghazal",
@@ -13,7 +13,6 @@ const ALLOWED_CATEGORIES = [
   "qataa",
   "other",
 ] as const;
-const ALLOWED_TOPICS = ["love", "nature", "history", "philosophy", "spirituality", "life", "society", "culture"] as const;
 
 // Schema for multilingual fields
 const multilingualStringSchema = z.object({
@@ -28,7 +27,10 @@ const multilingualOptionalStringSchema = z
     hi: z.string().max(500, "Hindi text cannot exceed 500 characters").optional(),
     ur: z.string().max(500, "Urdu text cannot exceed 500 characters").optional(),
   })
-  .optional();
+  .refine(
+    (data) => data.en || data.hi || data.ur,
+    { message: "At least one language (en, hi, ur) must be provided for multilingual fields" }
+  );
 
 const contentSchema = z.object({
   couplet: z.string().min(1, "Couplet is required").max(1000, "Couplet cannot exceed 1000 characters"),
@@ -48,19 +50,19 @@ export const createPoemSchema = z.object({
     hi: z.array(contentSchema).min(1, "At least one Hindi couplet is required"),
     ur: z.array(contentSchema).min(1, "At least one Urdu couplet is required"),
   }),
-  author: z
+  poet: z
     .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid author ID" }),
+    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poet ID" }),
   coverImage: z
     .instanceof(File)
-    .refine((file) => file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" })
-    .refine((file) => ["image/jpeg", "image/png"].includes(file.type), {
+    .refine((file) => !file || file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" })
+    .refine((file) => !file || ["image/jpeg", "image/png"].includes(file.type), {
       message: "Only JPEG or PNG images are allowed",
     })
     .optional()
     .nullable(),
   topics: z
-    .array(z.enum(ALLOWED_TOPICS))
+    .array(z.string().min(1, "Topic cannot be empty").max(50, "Topic cannot exceed 50 characters"))
     .max(10, "Cannot have more than 10 topics")
     .optional(),
   category: z.enum(ALLOWED_CATEGORIES).default("poem"),
@@ -73,6 +75,9 @@ export const createPoemSchema = z.object({
     },
     { message: "Slugs must be unique across languages" }
   ),
+  summary: multilingualOptionalStringSchema.optional(),
+  didYouKnow: multilingualOptionalStringSchema.optional(),
+  faqs: z.array(faqSchema).optional(),
 });
 
 // Validator for updating a poem
@@ -87,14 +92,14 @@ export const updatePoemSchema = z.object({
     .optional(),
   coverImage: z
     .instanceof(File)
-    .refine((file) => file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" })
-    .refine((file) => ["image/jpeg", "image/png"].includes(file.type), {
+    .refine((file) => !file || file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" })
+    .refine((file) => !file || ["image/jpeg", "image/png"].includes(file.type), {
       message: "Only JPEG or PNG images are allowed",
     })
     .optional()
     .nullable(),
   topics: z
-    .array(z.enum(ALLOWED_TOPICS))
+    .array(z.string().min(1, "Topic cannot be empty").max(50, "Topic cannot exceed 50 characters"))
     .max(10, "Cannot have more than 10 topics")
     .optional(),
   category: z.enum(ALLOWED_CATEGORIES).optional(),
@@ -138,6 +143,7 @@ export const bookmarkPoemSchema = z.object({
   userId: z
     .string()
     .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }),
+  action: z.enum(["add", "remove"]),
 });
 
 // Validator for liking/unliking a poem
@@ -148,6 +154,7 @@ export const likePoemSchema = z.object({
   userId: z
     .string()
     .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }),
+  action: z.enum(["add", "remove"]),
 });
 
 // Type exports

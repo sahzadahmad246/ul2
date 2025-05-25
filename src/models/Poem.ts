@@ -30,7 +30,7 @@ const PoemSchema = new Schema<IPoem>(
         },
       ],
     },
-    author: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    poet: { type: Schema.Types.ObjectId, ref: "User", required: true }, // Changed from author to poet
     bookmarks: [
       {
         userId: { type: Schema.Types.ObjectId, ref: "User", required: true },

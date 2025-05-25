@@ -1,3 +1,4 @@
+// src/app/types/userTypes.ts
 import { Types } from "mongoose";
 
 export interface IUser {
@@ -5,11 +6,12 @@ export interface IUser {
   googleId?: string;
   email: string;
   name: string;
+  slug: string;
   profilePicture?: {
     publicId?: string;
     url?: string;
   };
-  roles: ("user" | "poet" | "admin")[];
+  role: "user" | "poet" | "admin";
   bio?: string;
   dob?: Date;
   dateOfDeath?: Date;
@@ -24,6 +26,7 @@ export interface IUser {
   poemCount: number;
   bookmarks: { poemId: Types.ObjectId; bookmarkedAt: Date }[];
   collections: {
+    _id?: Types.ObjectId;
     name: string;
     description?: string;
     poems: Types.ObjectId[];

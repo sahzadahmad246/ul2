@@ -2,7 +2,7 @@
 import { Types } from "mongoose";
 
 export interface IPoem {
-  _id?: Types.ObjectId;
+  _id: Types.ObjectId;
   title: {
     en: string;
     hi: string;
@@ -13,7 +13,15 @@ export interface IPoem {
     hi: { couplet: string; meaning?: string }[];
     ur: { couplet: string; meaning?: string }[];
   };
-  author: Types.ObjectId;
+  poet: Types.ObjectId | { 
+    _id: Types.ObjectId; 
+    name: string; 
+    role: string;
+    profilePicture?: {
+      publicId?: string;
+      url?: string;
+    };
+  };
   bookmarks: { userId: Types.ObjectId; bookmarkedAt: Date }[];
   bookmarkCount: number;
   coverImage?: string;
@@ -51,4 +59,5 @@ export interface IPoem {
   viewsCount: number;
   createdAt: Date;
   updatedAt: Date;
+  errors?: string[];
 }

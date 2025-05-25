@@ -4,14 +4,14 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Compass, User, BookOpen, Feather, BookText, Settings, Moon, Sun, Search } from "lucide-react"
+import { Home, Compass, User, BookOpen, Feather, BookText, Settings, Moon, Sun, Search, LayoutDashboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useSession, signIn, signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useMobile } from "@/hooks/use-mobile"
+import { useIsMobile  } from "@/hooks/use-mobile"
 import { useUserStore } from "@/store/user-store"
 
 interface NavigationProps {
@@ -23,7 +23,7 @@ export default function Navigation({ children }: NavigationProps) {
   const router = useRouter()
   const [showSidebar, setShowSidebar] = useState(false)
   const { theme, setTheme } = useTheme()
-  const isMobile = useMobile()
+  const isMobile = useIsMobile()
   const [lastScrollY, setLastScrollY] = useState(0)
   const [hideBottomNav, setHideBottomNav] = useState(false)
   const { data: session, status } = useSession()
@@ -38,6 +38,7 @@ export default function Navigation({ children }: NavigationProps) {
     { name: "Ghazal", href: "/ghazal", icon: Feather },
     { name: "Nazm", href: "/nazm", icon: BookText },
     { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
   ]
 
   const bottomNavItems = navItems.slice(0, 4)

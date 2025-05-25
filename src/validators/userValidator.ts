@@ -15,12 +15,14 @@ export const signupSchema = z.object({
   googleId: z.string().min(1, "Google ID is required"),
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required").max(100, "Name cannot exceed 100 characters"),
+  slug: z.string().min(1, "Slug is required").max(100, "Slug cannot exceed 100 characters").regex(/^[a-z0-9-]+$/), // Added slug
   profilePicture: profilePictureSchema,
 });
 
 export const updateProfileSchema = z
   .object({
     name: z.string().min(1, "Name is required").max(100, "Name cannot exceed 100 characters").optional(),
+    slug: z.string().min(1, "Slug is required").max(100, "Slug cannot exceed 100 characters").regex(/^[a-z0-9-]+$/).optional(), // Added slug
     bio: z.string().max(500, "Bio cannot exceed 500 characters").optional(),
     dob: z
       .string()
