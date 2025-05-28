@@ -1,0 +1,10 @@
+# src/public/robots.txt
+User-agent: *
+Allow: /
+Allow: /poems/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /login/
+Disallow: /signup/
+
+Sitemap: https://unmatchedlines.com/sitemap.xml

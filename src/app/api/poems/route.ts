@@ -4,47 +4,27 @@ import { z } from "zod";
 import dbConnect from "@/lib/mongodb";
 import Poem from "@/models/Poem";
 import User from "@/models/User";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/authOptions";
 import { createPoemSchema } from "@/validators/poemValidator";
-import { v2 as cloudinary } from "cloudinary";
-import { Readable } from "stream";
+import { configureCloudinary, uploadImageStream } from "@/lib/utils/cloudinary";
 import { slugify } from "@/lib/slugify";
 
-// Define the structure for the body object
 interface PoemFormData {
   title?: { en: string; hi: string; ur: string };
-  summary?: { en: string; hi: string; ur: string };
-  didYouKnow?: { en: string; hi: string; ur: string };
-  content?: { en: string; hi: string; ur: string };
+  content?: { en: { couplet: string; meaning?: string }[]; hi: { couplet: string; meaning?: string }[]; ur: { couplet: string; meaning?: string }[] };
+  summary?: { en?: string; hi?: string; ur?: string };
+  didYouKnow?: { en?: string; hi?: string; ur?: string };
+  faqs?: { question: { en?: string; hi?: string; ur?: string }; answer: { en?: string; hi?: string; ur?: string } }[];
   topics?: string[];
-  faqs?: Array<{
-    question: { en: string; hi: string; ur: string };
-    answer: { en: string; hi: string; ur: string };
-  }>;
   poet?: string;
   coverImage?: File | null;
-  slug?: { en: string; hi: string; ur: string }; // Explicitly define slug
-  [key: string]: unknown; // Allow other fields
+  slug?: { en: string; hi: string; ur: string };
+  [key: string]: unknown;
 }
 
-// Define the FAQ structure
-interface FAQ {
-  question: { en: string; hi: string; ur: string };
-  answer: { en: string; hi: string; ur: string };
-}
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// GET: Retrieve all poems with pagination
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
@@ -53,241 +33,148 @@ export async function GET(req: NextRequest) {
     const poems = await Poem.find({ status: "published" })
       .skip(skip)
       .limit(limit)
-      .populate("poet", "name")
+      .populate("poet", "name slug")
+      .select("-__v")
       .lean();
-
     const total = await Poem.countDocuments({ status: "published" });
 
     return NextResponse.json({
       poems,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
-  } catch (error) {
-    console.error("[GET_POEMS_ERROR]", error);
+  } catch {
     return NextResponse.json(
-      { message: "Server error", error: error instanceof Error ? error.message : "Unknown error" },
+      { message: "Server error", error: "Unknown error" },
       { status: 500 }
     );
   }
 }
 
-// POST: Create a new poem
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      console.log("[POST_POEM] Unauthorized: No session or user ID");
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify current user’s role
     const currentUser = await User.findById(session.user.id);
     if (!currentUser || (currentUser.role !== "poet" && currentUser.role !== "admin")) {
-      console.log("[POST_POEM] Forbidden: User lacks permission", { userId: session.user.id, role: currentUser?.role });
-      return NextResponse.json(
-        { message: "You do not have permission to create poems" },
-        { status: 403 }
-      );
+      return NextResponse.json({ message: "Forbidden: Only poets or admins can create poems" }, { status: 403 });
     }
 
     const formData = await req.formData();
-    console.log("[POST_POEM] FormData entries:", [...formData.entries()]);
-
     const body: PoemFormData = {};
-    formData.forEach((value, key) => {
-      if (key === "content" || key === "topics") {
-        try {
-          body[key] = typeof value === "string" ? JSON.parse(value) : value;
-          console.log(`[POST_POEM] Parsed ${key}:`, body[key]);
-        } catch (error) {
-          console.error(`[POST_POEM] Failed to parse ${key}:`, error);
-        }
-      } else {
-        body[key] = value;
-      }
-    });
 
-    // Explicitly construct title, summary, didYouKnow, and faqs
-    body.title = {
-      en: formData.get("title[en]") as string,
-      hi: formData.get("title[hi]") as string,
-      ur: formData.get("title[ur]") as string,
-    };
-    body.summary = {
-      en: formData.get("summary[en]") as string || "",
-      hi: formData.get("summary[hi]") as string || "",
-      ur: formData.get("summary[ur]") as string || "",
-    };
-    body.didYouKnow = {
-      en: formData.get("didYouKnow[en]") as string || "",
-      hi: formData.get("didYouKnow[hi]") as string || "",
-      ur: formData.get("didYouKnow[ur]") as string || "",
-    };
-    body.faqs = [];
-    const faqsRaw = formData.get("faqs") as string;
-    if (faqsRaw) {
-      try {
-        const faqsArray: FAQ[] = JSON.parse(faqsRaw);
-        body.faqs = faqsArray.map((faq: FAQ) => ({
-          question: {
-            en: faq.question?.en || "",
-            hi: faq.question?.hi || "",
-            ur: faq.question?.ur || "",
-          },
-          answer: {
-            en: faq.answer?.en || "",
-            hi: faq.answer?.hi || "",
-            ur: faq.answer?.ur || "",
-          },
-        }));
-      } catch (error) {
-        console.error("[POST_POEM] Failed to parse faqs:", error);
-      }
+    // Validate required title fields
+    const titleEn = formData.get("title[en]");
+    const titleHi = formData.get("title[hi]");
+    const titleUr = formData.get("title[ur]");
+    if (typeof titleEn !== "string" || typeof titleHi !== "string" || typeof titleUr !== "string") {
+      return NextResponse.json({ message: "Missing or invalid title fields" }, { status: 400 });
     }
-
-    // Determine poet based on user role
-    let poetId: string;
-    if (currentUser.role === "admin") {
-      poetId = formData.get("poet") as string;
-      if (!poetId) {
-        console.log("[POST_POEM] Error: Poet ID is required for admin");
-        return NextResponse.json(
-          { message: "Poet ID is required" },
-          { status: 400 }
-        );
-      }
-      const poet = await User.findById(poetId);
-      if (!poet) {
-        console.log("[POST_POEM] Error: Poet not found", { poetId });
-        return NextResponse.json(
-          { message: "Selected poet not found" },
-          { status: 400 }
-        );
-      }
-      if (poet.role !== "poet") {
-        console.log("[POST_POEM] Error: Selected user is not a poet", { poetId, role: poet.role });
-        return NextResponse.json(
-          { message: "Selected user must have poet role" },
-          { status: 400 }
-        );
-      }
-      console.log("[POST_POEM] Admin selected poet:", { poetId, name: poet.name });
-    } else {
-      poetId = session.user.id; // Poet role uses current user
-      console.log("[POST_POEM] Using current poet:", { poetId, name: currentUser.name });
-    }
-
-    // Generate slugs based on English title
-    const englishTitle = body.title?.en;
-    if (!englishTitle) {
-      console.log("[POST_POEM] Error: English title is missing");
-      return NextResponse.json(
-        { message: "English title is required for slug generation" },
-        { status: 400 }
-      );
-    }
+    body.title = { en: titleEn, hi: titleHi, ur: titleUr };
     body.slug = {
-      en: slugify(englishTitle, "en"),
-      hi: slugify(englishTitle, "hi"),
-      ur: slugify(englishTitle, "ur"),
+      en: slugify(titleEn, "en"),
+      hi: slugify(titleEn, "hi"),
+      ur: slugify(titleEn, "ur"),
     };
 
-    // Check slug uniqueness
-    if (!body.slug) {
-      console.log("[POST_POEM] Error: Slug is undefined");
-      return NextResponse.json(
-        { message: "Slug generation failed" },
-        { status: 400 }
-      );
+    // Handle JSON-parsed fields with error checking
+    for (const key of ["content", "topics", "faqs"]) {
+      const value = formData.get(key);
+      if (value) {
+        if (typeof value !== "string") {
+          return NextResponse.json({ message: `Invalid ${key} format: must be a string` }, { status: 400 });
+        }
+        try {
+          body[key] = JSON.parse(value);
+        } catch {
+          return NextResponse.json({ message: `Invalid ${key} JSON format` }, { status: 400 });
+        }
+      }
     }
+
+    // Validate content presence
+    if (!body.content) {
+      return NextResponse.json({ message: "Content is required" }, { status: 400 });
+    }
+
+    // Handle optional multilingual fields
+    const summaryEn = formData.get("summary[en]");
+    const summaryHi = formData.get("summary[hi]");
+    const summaryUr = formData.get("summary[ur]");
+    if (summaryEn || summaryHi || summaryUr) {
+      body.summary = {
+        en: typeof summaryEn === "string" ? summaryEn : "",
+        hi: typeof summaryHi === "string" ? summaryHi : "",
+        ur: typeof summaryUr === "string" ? summaryUr : "",
+      };
+    }
+
+    const didYouKnowEn = formData.get("didYouKnow[en]");
+    const didYouKnowHi = formData.get("didYouKnow[hi]");
+    const didYouKnowUr = formData.get("didYouKnow[ur]");
+    if (didYouKnowEn || didYouKnowHi || didYouKnowUr) {
+      body.didYouKnow = {
+        en: typeof didYouKnowEn === "string" ? didYouKnowEn : "",
+        hi: typeof didYouKnowHi === "string" ? didYouKnowHi : "",
+        ur: typeof didYouKnowUr === "string" ? didYouKnowUr : "",
+      };
+    }
+
+    // Determine poet ID
+    const poetId = currentUser.role === "poet" ? session.user.id : formData.get("poet");
+    if (currentUser.role === "admin" && !poetId) {
+      return NextResponse.json({ message: "Poet ID is required for admins" }, { status: 400 });
+    }
+    const poet = await User.findById(poetId);
+    if (!poet || poet.role !== "poet") {
+      return NextResponse.json({ message: "Invalid or non-poet user selected" }, { status: 400 });
+    }
+
+    // Check for slug uniqueness
     const existingSlugs = await Poem.find({
-      $or: [
-        { "slug.en": body.slug.en },
-        { "slug.hi": body.slug.hi },
-        { "slug.ur": body.slug.ur },
-      ],
+      $or: [{ "slug.en": body.slug?.en }, { "slug.hi": body.slug?.hi }, { "slug.ur": body.slug?.ur }],
     }).select("slug");
     if (existingSlugs.length > 0) {
-      console.log("[POST_POEM] Slug conflict detected:", existingSlugs);
-      return NextResponse.json(
-        { message: "Slug already exists", errors: [{ message: `Slug conflict: ${JSON.stringify(body.slug)}` }] },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Slug already exists" }, { status: 400 });
     }
 
-    // Validate input
-    console.log("[POST_POEM] Validating data:", { ...body, poet: poetId });
+    // Validate data with Zod
     const validatedData = createPoemSchema.parse({
       ...body,
       poet: poetId,
       coverImage: formData.get("coverImage") as File | null,
     });
 
-    // Handle Cloudinary image upload
-    let coverImageUrl = "";
+    // Upload cover image if provided
+    let coverImage: { publicId: string; url: string } | undefined;
     if (validatedData.coverImage) {
-      console.log("[POST_POEM] Uploading cover image to Cloudinary");
-      try {
-        const buffer = Buffer.from(await validatedData.coverImage.arrayBuffer());
-        const stream = Readable.from(buffer);
-        const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: "unmatchedlines/poems", resource_type: "image" },
-            (error, result) => {
-              if (error || !result) {
-                console.error("[POST_POEM] Cloudinary upload failed:", error);
-                reject(error || new Error("Upload failed"));
-              } else {
-                console.log("[POST_POEM] Cloudinary upload successful:", result.secure_url);
-                resolve({ secure_url: result.secure_url });
-              }
-            }
-          );
-          stream.pipe(uploadStream);
-        });
-        coverImageUrl = uploadResult.secure_url;
-      } catch (error) {
-        console.error("[POST_POEM] Image upload error:", error);
-        return NextResponse.json(
-          { message: "Image upload error", error: error instanceof Error ? error.message : "Unknown error" },
-          { status: 500 }
-        );
-      }
+      configureCloudinary();
+      const buffer = Buffer.from(await validatedData.coverImage.arrayBuffer());
+      const { publicId, url } = await uploadImageStream(buffer, "unmatchedlines/poems");
+      coverImage = { publicId, url };
     }
 
     // Create poem
-    console.log("[POST_POEM] Creating poem with data:", { ...validatedData, coverImage: coverImageUrl });
     const poem = await Poem.create({
       ...validatedData,
       poet: validatedData.poet,
-      coverImage: coverImageUrl,
+      coverImage,
     });
 
-    // Update selected poet's poems array and poemCount
-    console.log("[POST_POEM] Updating poet poem count for user:", poetId);
-    await User.findByIdAndUpdate(
-      poetId,
-      {
-        $push: { poems: { poemId: poem._id } },
-        $inc: { poemCount: 1 },
-      },
-      { new: true }
-    );
+    // Update user's poems and poemCount
+    await User.findByIdAndUpdate(poetId, {
+      $push: { poems: { poemId: poem._id } },
+      $inc: { poemCount: 1 },
+    });
 
     return NextResponse.json({ message: "Poem created successfully", poem }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      console.error("[POST_POEM] Validation error:", error.errors);
       return NextResponse.json({ message: "Validation error", errors: error.errors }, { status: 400 });
     }
-    console.error("[POST_POEM] Server error:", error);
     return NextResponse.json(
       { message: "Server error", error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }

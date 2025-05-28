@@ -30,7 +30,6 @@ import {
   Edit,
   Trash2,
   Eye,
-  Heart,
   Bookmark,
   Calendar,
   User,
@@ -39,7 +38,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { usePoemStore } from "@/store/poemStore";
+import { usePoemStore } from "@/store/poem-store";
 import { toast } from "sonner";
 
 interface AdminPoemCardProps {
@@ -85,7 +84,7 @@ export function AdminPoemCard({ poem }: AdminPoemCardProps) {
   };
 
   const poetName =
-    typeof poem.poet === "object" && "name" in poem.poet
+    poem.poet && typeof poem.poet === "object" && "name" in poem.poet
       ? poem.poet.name
       : "Unknown Poet";
 
@@ -156,7 +155,7 @@ export function AdminPoemCard({ poem }: AdminPoemCardProps) {
           {poem.coverImage && (
             <div className="relative h-32 rounded-md overflow-hidden">
               <Image
-                src={poem.coverImage || "/placeholder.svg"}
+                src={poem.coverImage.url || "/placeholder.svg"}
                 alt={poem.title.en}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -187,17 +186,10 @@ export function AdminPoemCard({ poem }: AdminPoemCardProps) {
               </div>
               <div className="flex items-center gap-1 text-muted-foreground">
                 <TrendingUp className="h-3 w-3" />
-                <span>
-                  {(poem.likes?.length || 0) + (poem.bookmarkCount || 0)} eng.
-                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1 text-red-500">
-                <Heart className="h-3 w-3" />
-                <span>{poem.likes?.length || 0}</span>
-              </div>
               <div className="flex items-center gap-1 text-blue-500">
                 <Bookmark className="h-3 w-3" />
                 <span>{poem.bookmarkCount || 0}</span>

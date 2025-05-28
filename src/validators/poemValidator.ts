@@ -1,8 +1,7 @@
-// src/balidatores/poemValidators.ts
+// src/lib/validators/poemValidators.ts
 import { z } from "zod";
 import { Types } from "mongoose";
 
-// Define allowed categories
 const ALLOWED_CATEGORIES = [
   "poem",
   "ghazal",
@@ -14,23 +13,17 @@ const ALLOWED_CATEGORIES = [
   "other",
 ] as const;
 
-// Schema for multilingual fields
 const multilingualStringSchema = z.object({
   en: z.string().min(1, "English text is required").max(500, "English text cannot exceed 500 characters"),
   hi: z.string().min(1, "Hindi text is required").max(500, "Hindi text cannot exceed 500 characters"),
   ur: z.string().min(1, "Urdu text is required").max(500, "Urdu text cannot exceed 500 characters"),
 });
 
-const multilingualOptionalStringSchema = z
-  .object({
-    en: z.string().max(500, "English text cannot exceed 500 characters").optional(),
-    hi: z.string().max(500, "Hindi text cannot exceed 500 characters").optional(),
-    ur: z.string().max(500, "Urdu text cannot exceed 500 characters").optional(),
-  })
-  .refine(
-    (data) => data.en || data.hi || data.ur,
-    { message: "At least one language (en, hi, ur) must be provided for multilingual fields" }
-  );
+const multilingualOptionalStringSchema = z.object({
+  en: z.string().max(500, "English text cannot exceed 500 characters").optional(),
+  hi: z.string().max(500, "Hindi text cannot exceed 500 characters").optional(),
+  ur: z.string().max(500, "Urdu text cannot exceed 500 characters").optional(),
+});
 
 const contentSchema = z.object({
   couplet: z.string().min(1, "Couplet is required").max(1000, "Couplet cannot exceed 1000 characters"),
@@ -42,7 +35,6 @@ const faqSchema = z.object({
   answer: multilingualOptionalStringSchema,
 });
 
-// Validator for creating a new poem
 export const createPoemSchema = z.object({
   title: multilingualStringSchema,
   content: z.object({
@@ -50,9 +42,7 @@ export const createPoemSchema = z.object({
     hi: z.array(contentSchema).min(1, "At least one Hindi couplet is required"),
     ur: z.array(contentSchema).min(1, "At least one Urdu couplet is required"),
   }),
-  poet: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poet ID" }),
+  poet: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poet ID" }),
   coverImage: z
     .instanceof(File)
     .refine((file) => !file || file.size <= 5 * 1024 * 1024, { message: "Image must be less than 5MB" })
@@ -80,7 +70,6 @@ export const createPoemSchema = z.object({
   faqs: z.array(faqSchema).optional(),
 });
 
-// Validator for updating a poem
 export const updatePoemSchema = z.object({
   title: multilingualStringSchema.optional(),
   content: z
@@ -117,48 +106,16 @@ export const updatePoemSchema = z.object({
   summary: multilingualOptionalStringSchema.optional(),
   didYouKnow: multilingualOptionalStringSchema.optional(),
   faqs: z.array(faqSchema).optional(),
-  addBookmark: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" })
-    .optional(),
-  removeBookmark: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" })
-    .optional(),
-  addLike: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" })
-    .optional(),
-  removeLike: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" })
-    .optional(),
+  addBookmark: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }).optional(),
+  removeBookmark: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }).optional(),
 });
 
-// Validator for bookmarking/unbookmarking a poem
 export const bookmarkPoemSchema = z.object({
-  poemId: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }),
-  userId: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }),
+  poemId: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }),
+  userId: z.string().refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }),
   action: z.enum(["add", "remove"]),
 });
 
-// Validator for liking/unliking a poem
-export const likePoemSchema = z.object({
-  poemId: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid poem ID" }),
-  userId: z
-    .string()
-    .refine((val) => Types.ObjectId.isValid(val), { message: "Invalid user ID" }),
-  action: z.enum(["add", "remove"]),
-});
-
-// Type exports
 export type CreatePoemInput = z.infer<typeof createPoemSchema>;
 export type UpdatePoemInput = z.infer<typeof updatePoemSchema>;
 export type BookmarkPoemInput = z.infer<typeof bookmarkPoemSchema>;
-export type LikePoemInput = z.infer<typeof likePoemSchema>;

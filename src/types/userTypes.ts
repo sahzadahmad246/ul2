@@ -1,38 +1,24 @@
-// src/app/types/userTypes.ts
-import { Types } from "mongoose";
+// src/types/userTypes.ts
+export type Role = "user" | "poet" | "admin";
 
 export interface IUser {
-  _id?: Types.ObjectId;
-  googleId?: string;
+  _id: string;
+  googleId?: string | null;
   email: string;
   name: string;
   slug: string;
   profilePicture?: {
-    publicId?: string;
+    publicId?: string | null;
     url?: string;
   };
-  role: "user" | "poet" | "admin";
+  role: Role;
+  // Changed from string to Role
   bio?: string;
-  dob?: Date;
-  dateOfDeath?: Date;
+  dob?: Date | string;
   location?: string;
-  following: { userId: Types.ObjectId; followedAt: Date }[];
-  followers: { userId: Types.ObjectId; followedAt: Date }[];
-  followerCount: number;
-  followingCount: number;
-  interests: string[];
-  likedPoems: { poemId: Types.ObjectId }[];
-  poems: { poemId: Types.ObjectId }[];
+  poems: { poemId: string }[];
   poemCount: number;
-  bookmarks: { poemId: Types.ObjectId; bookmarkedAt: Date }[];
-  collections: {
-    _id?: Types.ObjectId;
-    name: string;
-    description?: string;
-    poems: Types.ObjectId[];
-    createdAt: Date;
-    updatedAt: Date;
-  }[];
-  createdAt: Date;
-  updatedAt: Date;
+  bookmarks: { poemId: string; bookmarkedAt: string | Date }[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }

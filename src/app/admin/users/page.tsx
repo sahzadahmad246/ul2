@@ -1,242 +1,175 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useAdminStore } from "@/store/admin-store"
+import { Plus, Search, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+import type { IUser } from "@/types/userTypes"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { UserEditDialog } from "@/components/admin/user-edit-dialog";
-import { useAdminStore } from "@/store/adminStore";
-import { Search, MoreHorizontal, Edit, Trash2, Users, Eye } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
-import type { IUser } from "@/types/userTypes";
-
-export default function AdminUsersPage() {
-  const { users, fetchUsers, deleteUser, loading } = useAdminStore();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-  const [editUser, setEditUser] = useState<IUser | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+export default function UsersPage() {
+  const { users, fetchAllUsers, deleteUserByIdentifier, loading } = useAdminStore()
+  const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
-    fetchUsers(true);
-  }, [fetchUsers]);
+    fetchAllUsers()
+  }, [fetchAllUsers])
 
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      user.role.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
 
-  const handleDeleteUser = async () => {
-    if (!deleteUserId) return;
+  const handleEdit = (user: IUser) => {
+    router.push(`/admin/users/${user.slug}/edit`)
+  }
 
-    setIsDeleting(true);
-    try {
-      const result = await deleteUser(deleteUserId);
+  const handleDelete = async (user: IUser) => {
+    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+      const result = await deleteUserByIdentifier(user._id)
       if (result.success) {
-        toast.success("User deleted successfully");
-        setDeleteUserId(null);
+        toast.success("User deleted successfully")
       } else {
-        toast.error(result.message || "Failed to delete user");
+        toast.error(result.message || "Failed to delete user")
       }
-    } catch {
-      toast.error("An error occurred while deleting the user");
-    } finally {
-      setIsDeleting(false);
     }
-  };
+  }
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
-        return "destructive";
+        return "destructive"
       case "poet":
-        return "default";
+        return "default"
       default:
-        return "secondary";
+        return "secondary"
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Users</h1>
-          <p className="text-muted-foreground">
-            Manage all users on the platform
-          </p>
+          <h1 className="text-3xl font-bold">Users Management</h1>
+          <p className="text-muted-foreground">Manage platform users and their roles</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          <span className="font-medium">{users.length} total users</span>
-        </div>
+        <Button asChild>
+          <Link href="/admin/users/new">
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </Link>
+        </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Search Users</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or role..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
-          ))}
-        </div>
-      ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Poems</TableHead>
-                <TableHead>Followers</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user._id?.toString()}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={
-                            user.profilePicture?.url ||
-                            "/placeholder.svg?height=32&width=32"
-                          }
-                          alt={user.name}
-                        />
-                        <AvatarFallback>{user.name[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{user.poemCount || 0}</TableCell>
-                  <TableCell>{user.followerCount || 0}</TableCell>
-                  <TableCell>
-                    {formatDistanceToNow(user.createdAt, { addSuffix: true })}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditUser(user)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEditUser(user)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() =>
-                            setDeleteUserId(user._id?.toString() || "")
-                          }
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
+      {/* Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Users ({filteredUsers.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-muted rounded animate-pulse" />
+                    <div className="h-3 bg-muted rounded w-2/3 animate-pulse" />
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {filteredUsers.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            No users found matching your search.
-          </p>
-        </div>
-      )}
-
-      <UserEditDialog
-        user={editUser}
-        open={!!editUser}
-        onOpenChange={(open) => !open && setEditUser(null)}
-      />
-
-      <AlertDialog
-        open={!!deleteUserId}
-        onOpenChange={() => setDeleteUserId(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this user? This action cannot be
-              undone and will also delete all their poems.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteUser}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Poems</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user._id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user.profilePicture?.url || "/placeholder.svg"} alt={user.name} />
+                            <AvatarFallback>{user.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge>
+                      </TableCell>
+                      <TableCell>{user.poemCount || 0}</TableCell>
+                      <TableCell>{user.location || "Not specified"}</TableCell>
+                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(user)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDelete(user)} className="text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
-  );
+  )
 }

@@ -11,7 +11,11 @@ interface ClientProvidersProps {
 
 export default function ClientProviders({ children }: ClientProvidersProps) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      disableTransitionOnChange
+    >
       <SessionProvider>{children}</SessionProvider>
     </ThemeProvider>
   );

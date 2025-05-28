@@ -1,52 +1,36 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAdminStore } from "@/store/adminStore";
-import type { IUser } from "@/types/userTypes";
-import { toast } from "sonner";
-import { X } from "lucide-react";
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAdminStore } from "@/store/admin-store"
+import type { IUser } from "@/types/userTypes"
+import { toast } from "sonner"
 
 interface UserEditDialogProps {
-  user: IUser | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  user: IUser | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-export function UserEditDialog({
-  user,
-  open,
-  onOpenChange,
-}: UserEditDialogProps) {
-  const { updateUser } = useAdminStore();
-  const [loading, setLoading] = useState(false);
+export function UserEditDialog({ user, open, onOpenChange }: UserEditDialogProps) {
+  const { updateUserByIdentifier } = useAdminStore()
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
     role: "user" as "user" | "poet" | "admin",
     bio: "",
     location: "",
-    interests: [] as string[],
-  });
-  const [interestsInput, setInterestsInput] = useState("");
+  })
 
   useEffect(() => {
     if (user) {
@@ -56,42 +40,36 @@ export function UserEditDialog({
         role: user.role || "user",
         bio: user.bio || "",
         location: user.location || "",
-        interests: user.interests || [],
-      });
-      setInterestsInput((user.interests || []).join(", "));
+      })
     }
-  }, [user]);
-
-  const handleInterestsChange = (value: string) => {
-    setInterestsInput(value);
-    const interests = value
-      .split(",")
-      .map((interest) => interest.trim())
-      .filter((interest) => interest.length > 0);
-    setFormData((prev) => ({ ...prev, interests }));
-  };
+  }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?._id) return;
+    e.preventDefault()
+    if (!user?._id) return
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const result = await updateUser(user._id.toString(), formData);
+      const data = new FormData()
+      Object.entries(formData).forEach(([key, value]) => {
+        data.append(key, value)
+      })
+
+      const result = await updateUserByIdentifier(user._id.toString(), data)
       if (result.success) {
-        toast.success("User updated successfully");
-        onOpenChange(false);
+        toast.success("User updated successfully")
+        onOpenChange(false)
       } else {
-        toast.error(result.message || "Failed to update user");
+        toast.error(result.message || "Failed to update user")
       }
     } catch {
-      toast.error("An error occurred while updating the user");
+      toast.error("An error occurred while updating the user")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  if (!user) return null;
+  if (!user) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -104,13 +82,7 @@ export function UserEditDialog({
           {/* User Avatar and Basic Info */}
           <div className="flex items-center gap-4 p-4 rounded-lg border">
             <Avatar className="h-16 w-16">
-              <AvatarImage
-                src={
-                  user.profilePicture?.url ||
-                  "/placeholder.svg?height=64&width=64"
-                }
-                alt={user.name}
-              />
+              <AvatarImage src={user.profilePicture?.url || "/placeholder.svg?height=64&width=64"} alt={user.name} />
               <AvatarFallback>{user.name[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -118,10 +90,7 @@ export function UserEditDialog({
               <p className="text-sm text-muted-foreground">{user.email}</p>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary">{user.role}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {user.followerCount || 0} followers • {user.poemCount || 0}{" "}
-                  poems
-                </span>
+                <span className="text-xs text-muted-foreground">{user.poemCount || 0} poems</span>
               </div>
             </div>
           </div>
@@ -132,9 +101,7 @@ export function UserEditDialog({
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
               />
             </div>
@@ -144,9 +111,7 @@ export function UserEditDialog({
               <Input
                 id="slug"
                 value={formData.slug}
-                onChange={(e) =>
-                  setFormData({ ...formData, slug: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                 required
               />
             </div>
@@ -156,9 +121,7 @@ export function UserEditDialog({
             <Label htmlFor="role">Role</Label>
             <Select
               value={formData.role}
-              onValueChange={(value: "user" | "poet" | "admin") =>
-                setFormData({ ...formData, role: value })
-              }
+              onValueChange={(value: "user" | "poet" | "admin") => setFormData({ ...formData, role: value })}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -176,9 +139,7 @@ export function UserEditDialog({
             <Textarea
               id="bio"
               value={formData.bio}
-              onChange={(e) =>
-                setFormData({ ...formData, bio: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
               rows={3}
               placeholder="User bio..."
             />
@@ -189,52 +150,13 @@ export function UserEditDialog({
             <Input
               id="location"
               value={formData.location}
-              onChange={(e) =>
-                setFormData({ ...formData, location: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="User location..."
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="interests">Interests</Label>
-            <Input
-              id="interests"
-              value={interestsInput}
-              onChange={(e) => handleInterestsChange(e.target.value)}
-              placeholder="poetry, literature, art (comma separated)"
-            />
-            {formData.interests.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.interests.map((interest, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {interest}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newInterests = formData.interests.filter(
-                          (_, i) => i !== index
-                        );
-                        setFormData({ ...formData, interests: newInterests });
-                        setInterestsInput(newInterests.join(", "));
-                      }}
-                      className="ml-1 hover:text-destructive"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancel
             </Button>
             <Button type="submit" disabled={loading} className="flex-1">
@@ -244,5 +166,5 @@ export function UserEditDialog({
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

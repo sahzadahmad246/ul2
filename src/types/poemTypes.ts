@@ -1,32 +1,63 @@
-// src/app/types/poemTypes.ts
-import { Types } from "mongoose";
+// src/types/poemTypes.ts
+export interface ProfilePicture {
+  publicId?: string;
+  url: string;
+}
+
+export interface Poet {
+  _id: string;
+  name: string;
+  role?: string;
+  profilePicture?: ProfilePicture;
+  slug?: string;
+}
+
+export interface ContentItem {
+  couplet: string;
+  meaning?: string;
+  _id?: string; // Optional to handle potential _id in subdocuments
+}
+
+export interface Bookmark {
+  userId: string;
+  bookmarkedAt: Date;
+}
+
+export interface FAQ {
+  question: { en?: string; hi?: string; ur?: string };
+  answer: { en?: string; hi?: string; ur?: string };
+  _id?: string; // Optional to handle potential _id in subdocuments
+}
 
 export interface IPoem {
-  _id: Types.ObjectId;
+  _id: string;
   title: {
     en: string;
     hi: string;
     ur: string;
   };
   content: {
-    en: { couplet: string; meaning?: string }[];
-    hi: { couplet: string; meaning?: string }[];
-    ur: { couplet: string; meaning?: string }[];
+    en: ContentItem[];
+    hi: ContentItem[];
+    ur: ContentItem[];
   };
-  poet: Types.ObjectId | { 
-    _id: Types.ObjectId; 
-    name: string; 
-    role: string;
-    profilePicture?: {
-      publicId?: string;
-      url?: string;
-    };
-  };
-  bookmarks: { userId: Types.ObjectId; bookmarkedAt: Date }[];
+  poet: Poet | null;
+  bookmarks: Bookmark[];
   bookmarkCount: number;
-  coverImage?: string;
+  coverImage?: {
+    publicId: string;
+    url: string;
+  };
   topics: string[];
-  category: "poem" | "ghazal" | "sher" | "nazm" | "rubai" | "marsiya" | "qataa" | "other";
+  category:
+    | "poem"
+    | "ghazal"
+    | "sher"
+    | "nazm"
+    | "rubai"
+    | "marsiya"
+    | "qataa"
+    | "other";
   status: "draft" | "published";
   slug: {
     en: string;
@@ -43,21 +74,21 @@ export interface IPoem {
     hi?: string;
     ur?: string;
   };
-  faqs: {
-    question: {
-      en?: string;
-      hi?: string;
-      ur?: string;
-    };
-    answer: {
-      en?: string;
-      hi?: string;
-      ur?: string;
-    };
-  }[];
-  likes: { userId: Types.ObjectId; likedAt: Date }[];
+  faqs: FAQ[];
   viewsCount: number;
   createdAt: Date;
   updatedAt: Date;
-  errors?: string[];
+ 
+}
+
+export interface SerializedPoem extends Omit<IPoem, 'createdAt' | 'updatedAt' | 'bookmarks'> {
+  createdAt: string;
+  updatedAt: string;
+  bookmarks: { userId: string; bookmarkedAt: string }[];
+  content: {
+    en: Array<ContentItem & { _id?: string }>;
+    hi: Array<ContentItem & { _id?: string }>;
+    ur: Array<ContentItem & { _id?: string }>;
+  };
+  faqs: Array<FAQ & { _id?: string }>;
 }

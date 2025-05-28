@@ -1,6 +1,6 @@
 "use client"
 
-import PoemForm from "@/components/poems/PoemForm"
+import PoemForm from "@/components/admin/poem-form"
 
 export default function NewPoemPage() {
   return <PoemForm />

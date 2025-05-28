@@ -4,7 +4,7 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePoemStore } from "@/store/poemStore";
+import { usePoemStore } from "@/store/poem-store";
 import { usePoetStore } from "@/store/poetStore";
 import { useUserStore } from "@/store/user-store";
 import type { IPoem } from "@/types/poemTypes";
