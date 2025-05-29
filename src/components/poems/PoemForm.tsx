@@ -5,7 +5,7 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePoemStore } from "@/store/poem-store";
-import { usePoetStore } from "@/store/poetStore";
+import { usePoetStore } from "@/store/poet-store";
 import { useUserStore } from "@/store/user-store";
 import type { IPoem } from "@/types/poemTypes";
 import { Types } from "mongoose";
@@ -44,7 +44,7 @@ const languageNames = {
 export default function PoemForm({ initialData, slug }: PoemFormProps) {
   const router = useRouter();
   const { createPoem, updatePoem, loading } = usePoemStore();
-  const { poets, fetchPoets, loading: poetsLoading } = usePoetStore();
+  const { poets, fetchPoetByIdentifier, loading: poetsLoading } = usePoetStore();
   const { userData } = useUserStore();
   const isEdit = !!initialData;
 
@@ -96,9 +96,9 @@ export default function PoemForm({ initialData, slug }: PoemFormProps) {
 
   useEffect(() => {
     if (userData?.role === "admin") {
-      fetchPoets();
+      fetchPoetByIdentifier(userData.slug);
     }
-  }, [userData?.role, fetchPoets]);
+  }, [userData?.role, userData?.slug,  fetchPoetByIdentifier]);
 
   if (!userData?.role || (userData.role !== "admin" && userData.role !== "poet")) {
     return (

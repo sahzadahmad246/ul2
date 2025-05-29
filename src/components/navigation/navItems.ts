@@ -4,7 +4,7 @@ import { Home, Compass, User, BookOpen, Feather, BookText, Settings, LayoutDashb
 export const navItems = [
   { name: "Home", href: "/", icon: Home },
   { name: "Explore", href: "/explore", icon: Compass },
-  { name: "Poet", href: "/poet", icon: User },
+  { name: "Poets", href: "/poets", icon: User },
   { name: "Sher", href: "/sher", icon: BookOpen },
   { name: "Ghazal", href: "/ghazal", icon: Feather },
   { name: "Nazm", href: "/nazm", icon: BookText },
