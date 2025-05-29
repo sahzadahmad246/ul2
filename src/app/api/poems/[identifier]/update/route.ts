@@ -1,4 +1,4 @@
-// src/app/api/poems/[identifier]/route.ts
+// src/app/api/poems/[identifier]/update/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { Types } from "mongoose";
 import { getServerSession } from "next-auth/next";
@@ -52,50 +52,6 @@ interface PoemFormData {
   [key: string]: unknown;
 }
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ identifier: string }> }
-) {
-  try {
-    await dbConnect();
-    const params = await context.params;
-    const { identifier } = params;
-    console.log("GET request for identifier:", identifier); // Debug log
-
-    const poem = Types.ObjectId.isValid(identifier)
-      ? await Poem.findById(identifier)
-      : await Poem.findOne({
-          $or: [
-            { "slug.en": identifier },
-            { "slug.hi": identifier },
-            { "slug.ur": identifier },
-          ],
-        }).populate("poet", "name profilePicture slug");
-
-    if (!poem) {
-      console.warn(`Poem not found for identifier: ${identifier}`);
-      return NextResponse.json({ message: "Poem not found" }, { status: 404 });
-    }
-
-    // Increment viewsCount
-    await Poem.updateOne({ _id: poem._id }, { $inc: { viewsCount: 1 } });
-
-    const poemObject = poem.toObject();
-    console.log("Poem data:", JSON.stringify(poemObject, null, 2)); // Debug log
-
-    return NextResponse.json({ poem: poemObject });
-  } catch (error: unknown) {
-    console.error("Error in GET /api/poems/[identifier]:", error);
-    return NextResponse.json(
-      {
-        message: "Server error",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
-  }
-}
-
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ identifier: string }> }
@@ -103,15 +59,7 @@ export async function PUT(
   try {
     const params = await context.params;
     const { identifier } = params;
-    const pathname = req.nextUrl.pathname;
-    console.log("PUT request received:", pathname); // Debug log
-    console.log("Identifier:", identifier); // Debug log
-
-    // Check if the request is for /update
-    if (!pathname.endsWith("/update")) {
-      console.warn("Invalid PUT request path:", pathname);
-      return NextResponse.json({ message: "Invalid route" }, { status: 404 });
-    }
+    console.log("PUT request received for identifier:", identifier); // Debug log
 
     await dbConnect();
     console.log("Database connected");
@@ -146,6 +94,7 @@ export async function PUT(
       console.log("Poem not found for identifier:", identifier);
       return NextResponse.json({ message: "Poem not found" }, { status: 404 });
     }
+    
     // Check if the user is authorized to update this poem
     if (currentUser.role === "poet") {
       if (!poem.poet || poem.poet._id.toString() !== session.user.id) {

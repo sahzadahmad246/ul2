@@ -231,7 +231,7 @@ export default function PoemCard({ poem }: PoemCardProps) {
 
       {/* Enhanced Actions */}
       <div className="flex items-center border-t border-border/30 bg-muted/20 px-5 py-4">
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-around w-full">
           <button
             className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-background/80 ${
               isBookmarked

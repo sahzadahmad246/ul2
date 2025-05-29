@@ -2,15 +2,20 @@ import { NextResponse, NextRequest } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { adminMiddleware } from "@/lib/middleware/adminMiddleware";
-import { getCurrentUser } from "@/lib/auth/session";
-import { configureCloudinary, uploadImageStream, deleteImage } from "@/lib/utils/cloudinary";
+import {
+  configureCloudinary,
+  uploadImageStream,
+  deleteImage,
+} from "@/lib/utils/cloudinary";
 import { signupSchema } from "@/validators/userValidator";
 import { Role, IUser } from "@/types/userTypes";
 import { slugifyUser } from "@/lib/slugify";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export async function GET(req: NextRequest) {
   try {
-    const isAdminRoute = req.url.includes("/api/users") && !req.url.includes("/[identifier]");
+    const isAdminRoute =
+      req.url.includes("/api/users") && !req.url.includes("/[identifier]");
     if (isAdminRoute) {
       const authResponse = await adminMiddleware();
       if (authResponse) return authResponse;
@@ -21,10 +26,7 @@ export async function GET(req: NextRequest) {
       const limit = parseInt(searchParams.get("limit") || "10");
       const skip = (page - 1) * limit;
 
-      const users = await User.find()
-        .skip(skip)
-        .limit(limit)
-        .lean();
+      const users = await User.find().skip(skip).limit(limit).lean();
 
       const total = await User.countDocuments();
 
@@ -35,17 +37,19 @@ export async function GET(req: NextRequest) {
           dob: user.dob ? new Date(user.dob).toISOString() : undefined,
           createdAt: new Date(user.createdAt).toISOString(),
           updatedAt: new Date(user.updatedAt).toISOString(),
-          bookmarks: user.bookmarks?.map((bookmark) => ({
-            ...bookmark,
-            poemId: bookmark.poemId.toString(),
-            bookmarkedAt: bookmark.bookmarkedAt
-              ? new Date(bookmark.bookmarkedAt).toISOString()
-              : new Date().toISOString(), // Fallback to current date if bookmarkedAt is null/undefined
-          })) || [],
-          poems: user.poems?.map((poem) => ({
-            ...poem,
-            poemId: poem.poemId.toString(),
-          })) || [],
+          bookmarks:
+            user.bookmarks?.map((bookmark) => ({
+              ...bookmark,
+              poemId: bookmark.poemId.toString(),
+              bookmarkedAt: bookmark.bookmarkedAt
+                ? new Date(bookmark.bookmarkedAt).toISOString()
+                : new Date().toISOString(),
+            })) || [],
+          poems:
+            user.poems?.map((poem) => ({
+              ...poem,
+              poemId: poem.poemId.toString(),
+            })) || [],
         })) as IUser[],
         pagination: {
           page,
@@ -70,22 +74,26 @@ export async function GET(req: NextRequest) {
         dob: user.dob ? new Date(user.dob).toISOString() : undefined,
         createdAt: new Date(user.createdAt).toISOString(),
         updatedAt: new Date(user.updatedAt).toISOString(),
-        bookmarks: user.bookmarks?.map((bookmark) => ({
-          ...bookmark,
-          poemId: bookmark.poemId.toString(),
-          bookmarkedAt: bookmark.bookmarkedAt
-            ? new Date(bookmark.bookmarkedAt).toISOString()
-            : new Date().toISOString(), // Fallback to current date
-        })) || [],
-        poems: user.poems?.map((poem) => ({
-          ...poem,
-          poemId: poem.poemId.toString(),
-        })) || [],
+        bookmarks:
+          user.bookmarks?.map((bookmark) => ({
+            ...bookmark,
+            poemId: bookmark.poemId.toString(),
+            bookmarkedAt: bookmark.bookmarkedAt
+              ? new Date(bookmark.bookmarkedAt).toISOString()
+              : new Date().toISOString(),
+          })) || [],
+        poems:
+          user.poems?.map((poem) => ({
+            ...poem,
+            poemId: poem.poemId.toString(),
+          })) || [],
       } as IUser);
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     return NextResponse.json(
-      { error: `Internal server error: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { error: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -99,42 +107,77 @@ export async function POST(req: NextRequest) {
     await dbConnect();
     const formData = await req.formData();
     const data = {
-      googleId: formData.get("googleId") as string,
       email: formData.get("email") as string,
       name: formData.get("name") as string,
       role: formData.get("role") as string,
       bio: formData.get("bio") as string,
-      dob: formData.get("dob") as string,
       location: formData.get("location") as string,
+      dob: formData.get("dob") as string,
       image: formData.get("image") as File | null,
     };
 
-    // Validate input
-    const parsedData = signupSchema.parse({
-      googleId: data.googleId || undefined,
-      email: data.email,
-      name: data.name,
-      slug: data.name ? slugifyUser(data.name) : undefined,
-      profilePicture: data.image ? {} : undefined,
-    });
-
-    // Validate role
-    if (data.role && !["user", "poet", "admin"].includes(data.role)) {
-      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    if (!data.email || !data.name) {
+      return NextResponse.json(
+        { error: "Email and name are required fields" },
+        { status: 400 }
+      );
     }
 
-    // Check for existing email
-    if (await User.findOne({ email: parsedData.email })) {
-      return NextResponse.json({ error: "Email already exists" }, { status: 400 });
+    const slug = slugifyUser(data.name);
+    const validRoles = ["user", "poet", "admin"];
+    if (data.role && !validRoles.includes(data.role)) {
+      return NextResponse.json(
+        { error: `Invalid role. Must be one of: ${validRoles.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const existingUser = await User.findOne({ email: data.email });
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "A user with this email already exists" },
+        { status: 400 }
+      );
+    }
+
+    const existingSlug = await User.findOne({ slug });
+    if (existingSlug) {
+      return NextResponse.json(
+        { error: "A user with this name already exists (slug conflict)" },
+        { status: 400 }
+      );
+    }
+
+    let parsedData;
+    try {
+      parsedData = signupSchema.parse({
+        email: data.email,
+        name: data.name,
+        slug: slug,
+        profilePicture: data.image ? {} : undefined,
+      });
+    } catch (zodError: unknown) {
+      const errorMessage =
+        zodError instanceof Error ? zodError.message : "Invalid data format";
+      return NextResponse.json(
+        { error: `Validation failed: ${errorMessage}` },
+        { status: 400 }
+      );
     }
 
     let profilePicture: { publicId: string; url: string } | undefined;
-    if (data.image) {
-      if (!["image/jpeg", "image/png"].includes(data.image.type)) {
-        return NextResponse.json({ error: "Only JPEG or PNG images are allowed" }, { status: 400 });
+    if (data.image && data.image.size > 0) {
+      if (!["image/jpeg", "image/png", "image/jpg"].includes(data.image.type)) {
+        return NextResponse.json(
+          { error: "Only JPEG and PNG images are allowed" },
+          { status: 400 }
+        );
       }
       if (data.image.size > 5 * 1024 * 1024) {
-        return NextResponse.json({ error: "Image must be less than 5MB" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Image must be less than 5MB" },
+          { status: 400 }
+        );
       }
       configureCloudinary();
       const buffer = Buffer.from(await data.image.arrayBuffer());
@@ -142,23 +185,40 @@ export async function POST(req: NextRequest) {
     }
 
     const newUser = new User({
-      ...parsedData,
-      role: (data.role as Role) || "poet",
-      bio: data.bio,
+      email: parsedData.email,
+      name: parsedData.name,
+      slug: parsedData.slug,
+      role: (data.role as Role) || "user",
+      bio: data.bio || "",
+      location: data.location || "",
       dob: data.dob ? new Date(data.dob) : undefined,
-      location: data.location,
       profilePicture,
-      bookmarks: [], // Ensure bookmarks is empty to avoid null bookmarkedAt
+      bookmarks: [],
+      poems: [],
     });
 
     try {
       await newUser.save();
-    } catch (error) {
-      // Rollback Cloudinary upload if user save fails
+    } catch (saveError: unknown) {
       if (profilePicture?.publicId) {
-        await deleteImage(profilePicture.publicId);
+        try {
+          await deleteImage(profilePicture.publicId);
+        } catch {}
       }
-      throw error;
+      if (
+        saveError &&
+        typeof saveError === "object" &&
+        "code" in saveError &&
+        saveError.code === 11000
+      ) {
+        const mongoError = saveError as { keyPattern?: Record<string, number> };
+        const field = Object.keys(mongoError.keyPattern || {})[0] || "field";
+        return NextResponse.json(
+          { error: `A user with this ${field} already exists` },
+          { status: 400 }
+        );
+      }
+      throw saveError;
     }
 
     const userResponse: IUser = {
@@ -167,23 +227,30 @@ export async function POST(req: NextRequest) {
       dob: newUser.dob ? new Date(newUser.dob).toISOString() : undefined,
       createdAt: new Date(newUser.createdAt).toISOString(),
       updatedAt: new Date(newUser.updatedAt).toISOString(),
-      bookmarks: newUser.bookmarks?.map((bookmark) => ({
-        ...bookmark,
-        poemId: bookmark.poemId.toString(),
-        bookmarkedAt: bookmark.bookmarkedAt
-          ? new Date(bookmark.bookmarkedAt).toISOString()
-          : new Date().toISOString(), // Fallback to current date
-      })) || [],
-      poems: newUser.poems?.map((poem) => ({
-        ...poem,
-        poemId: poem.poemId.toString(),
-      })) || [],
+      bookmarks:
+        newUser.bookmarks?.map((bookmark) => ({
+          ...bookmark,
+          poemId: bookmark.poemId.toString(),
+          bookmarkedAt: bookmark.bookmarkedAt
+            ? new Date(bookmark.bookmarkedAt).toISOString()
+            : new Date().toISOString(),
+        })) || [],
+      poems:
+        newUser.poems?.map((poem) => ({
+          ...poem,
+          poemId: poem.poemId.toString(),
+        })) || [],
     };
 
-    return NextResponse.json({ user: userResponse }, { status: 201 });
-  } catch (error) {
     return NextResponse.json(
-      { error: `Internal server error: ${error instanceof Error ? error.message : "Unknown error"}` },
+      { user: userResponse, message: "User created successfully" },
+      { status: 201 }
+    );
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return NextResponse.json(
+      { error: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }

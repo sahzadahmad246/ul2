@@ -1,24 +1,22 @@
-"use client"
+"use client";
 
-import { useEffect } from "react"
-import { useAdminStore } from "@/store/admin-store"
-import UserForm from "@/components/admin/user-form"
-import { Card, CardContent } from "@/components/ui/card"
+import { useEffect } from "react";
+import { useAdminStore } from "@/store/admin-store";
+import UserForm from "@/components/admin/user-form";
+import { Card, CardContent } from "@/components/ui/card";
 
-// Adjust the interface to account for params being a Promise
 interface EditUserPageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }
 
 export default function EditUserPage({ params }: EditUserPageProps) {
-  const { selectedUser, fetchUserByIdentifier, loading } = useAdminStore()
+  const { selectedUser, fetchUserByIdentifier, loading } = useAdminStore();
 
-  // Handle the Promise for params
   useEffect(() => {
     params.then(({ slug }) => {
-      fetchUserByIdentifier(slug)
-    })
-  }, [params, fetchUserByIdentifier])
+      fetchUserByIdentifier(slug);
+    });
+  }, [params, fetchUserByIdentifier]);
 
   if (loading) {
     return (
@@ -28,7 +26,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
           <p>Loading user...</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!selectedUser) {
@@ -40,8 +38,8 @@ export default function EditUserPage({ params }: EditUserPageProps) {
           <p className="text-muted-foreground">The user you are looking for does not exist.</p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  return <UserForm initialData={selectedUser} slug={selectedUser.slug} />
+  return <UserForm initialData={selectedUser} slug={selectedUser.slug} />;
 }

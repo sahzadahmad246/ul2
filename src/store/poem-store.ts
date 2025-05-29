@@ -107,7 +107,7 @@ export const usePoemStore = create<PoemState>((set) => ({
   updatePoem: async (identifier: string, data: FormData) => {
     try {
       set({ loading: true, error: null });
-      const response = await fetch(`/api/poems/${identifier}`, {
+      const response = await fetch(`/api/poems/${identifier}/update`, {
         method: "PUT",
         body: data,
       });

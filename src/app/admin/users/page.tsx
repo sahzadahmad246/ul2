@@ -37,7 +37,7 @@ export default function UsersPage() {
 
   const handleDelete = async (user: IUser) => {
     if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-      const result = await deleteUserByIdentifier(user._id)
+      const result = await deleteUserByIdentifier(user.slug)
       if (result.success) {
         toast.success("User deleted successfully")
       } else {

@@ -8,7 +8,7 @@ export const profilePictureSchema = z.object({
 }).optional();
 
 export const signupSchema = z.object({
-  googleId: z.string().min(1, "Google ID is required"),
+  googleId: z.string().min(1, "Google ID is required").optional(),
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required").max(100, "Name cannot exceed 100 characters"),
   slug: z.string().min(1, "Slug is required").max(100).regex(/^[a-z0-9-]+$/),

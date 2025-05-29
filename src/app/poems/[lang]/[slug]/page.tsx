@@ -1,4 +1,3 @@
-// src/app/poems/[lang]/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import PoemDetails from "@/components/poems/PoemDetails";
 import dbConnect from "@/lib/mongodb";
@@ -198,12 +197,10 @@ export default async function PoemPage({ params }: PoemPageProps) {
 
   return (
     <>
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-      </head>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <PoemDetails poem={serializedPoem} currentLang={lang} />
     </>
   );
