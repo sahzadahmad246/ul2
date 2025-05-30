@@ -1,9 +1,11 @@
+// src/app/api/user/route.ts
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
+import Poem from "@/models/Poem";
 import { configureCloudinary, uploadImageStream, deleteImage } from "@/lib/utils/cloudinary";
-import { IUser } from "@/types/userTypes";
+import { IUser, IPoemPopulated } from "@/types/userTypes";
 
 export async function GET() {
   try {
@@ -12,22 +14,52 @@ export async function GET() {
     if (!sessionUser?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const user = await User.findById(sessionUser.id).lean();
+
+    // Populate poem data for bookmarks, including poet's name
+    const user = await User.findById(sessionUser.id)
+      .populate({
+        path: "bookmarks.poemId",
+        model: Poem,
+        select: "content.en slug.en viewsCount poet",
+        populate: {
+          path: "poet",
+          model: User,
+          select: "name",
+        },
+      })
+      .lean();
+
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    return NextResponse.json({
+
+    // Transform the response to include only necessary data
+    const transformedUser: IUser = {
       ...user,
       _id: user._id.toString(),
-      dob: user.dob ? new Date(user.dob).toISOString() : null,
+      dob: user.dob ? new Date(user.dob).toISOString() : undefined, // Use undefined to match dob?: string | Date
       createdAt: new Date(user.createdAt).toISOString(),
       updatedAt: new Date(user.updatedAt).toISOString(),
-      bookmarks: user.bookmarks?.map((bookmark) => ({
-        ...bookmark,
-        bookmarkedAt: bookmark.bookmarkedAt ? new Date(bookmark.bookmarkedAt).toISOString() : null,
-      })) || [],
-    });
-  } catch {
+      bookmarks: user.bookmarks?.map((bookmark) => {
+        const poem = bookmark.poemId as unknown as IPoemPopulated | null; // Safer type assertion
+        return {
+          poemId: poem?._id?.toString() || bookmark.poemId?.toString() || "",
+          bookmarkedAt: bookmark.bookmarkedAt ? new Date(bookmark.bookmarkedAt).toISOString() : null,
+          poem: poem
+            ? {
+                firstCouplet: poem.content?.en?.[0]?.couplet || "",
+                slug: poem.slug?.en || "",
+                viewsCount: poem.viewsCount || 0,
+                poetName: poem.poet?.name || "Unknown",
+              }
+            : null,
+        };
+      }) || [],
+    };
+
+    return NextResponse.json(transformedUser);
+  } catch (error) {
+    console.error("Error fetching user data:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

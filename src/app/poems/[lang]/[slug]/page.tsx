@@ -6,6 +6,7 @@ import { Metadata } from "next";
 import { IPoem, SerializedPoem, ContentItem, Bookmark, FAQ } from "@/types/poemTypes";
 
 // Utility function to serialize Mongoose document
+
 function serializePoem(poem: IPoem): SerializedPoem {
   return {
     ...poem,
@@ -21,28 +22,28 @@ function serializePoem(poem: IPoem): SerializedPoem {
         }
       : null,
     content: {
-      en: poem.content.en.map((item: ContentItem) => ({
+      en: poem.content.en?.map((item: ContentItem) => ({
         ...item,
         _id: item._id ? item._id.toString() : undefined,
-      })),
-      hi: poem.content.hi.map((item: ContentItem) => ({
+      })) || [],
+      hi: poem.content.hi?.map((item: ContentItem) => ({
         ...item,
         _id: item._id ? item._id.toString() : undefined,
-      })),
-      ur: poem.content.ur.map((item: ContentItem) => ({
+      })) || [],
+      ur: poem.content.ur?.map((item: ContentItem) => ({
         ...item,
         _id: item._id ? item._id.toString() : undefined,
-      })),
+      })) || [],
     },
-    bookmarks: poem.bookmarks.map((bookmark: Bookmark) => ({
+    bookmarks: poem.bookmarks?.map((bookmark: Bookmark) => ({
       ...bookmark,
       userId: bookmark.userId.toString(),
       bookmarkedAt: bookmark.bookmarkedAt.toISOString(),
-    })),
-    faqs: poem.faqs.map((faq: FAQ) => ({
+    })) || [],
+    faqs: poem.faqs?.map((faq: FAQ) => ({
       ...faq,
       _id: faq._id ? faq._id.toString() : undefined,
-    })),
+    })) || [],
     createdAt: poem.createdAt.toISOString(),
     updatedAt: poem.updatedAt.toISOString(),
   };

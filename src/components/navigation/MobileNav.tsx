@@ -1,10 +1,11 @@
+// src/components/navigation/MobileNav.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import { useTheme } from "next-themes";
-import Image from "next/image"; // Import Next.js Image component
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Feather, Moon, Sun } from "lucide-react";
@@ -46,6 +47,11 @@ export default function MobileNav({ children }: MobileNavProps) {
   const handleSignIn = async () => {
     await signIn("google", { callbackUrl: pathname || "/profile" });
   };
+
+  // Filter navItems to show Dashboard only for admin users
+  const filteredNavItems = navItems.filter(
+    (item) => item.name !== "Dashboard" || (userData?.role === "admin")
+  );
 
   return (
     <>
@@ -90,7 +96,7 @@ export default function MobileNav({ children }: MobileNavProps) {
         )}
       >
         <div className="grid grid-cols-4 h-full">
-          {navItems.slice(0, 4).map((item) => (
+          {filteredNavItems.slice(0, 4).map((item) => (
             <Link
               key={item.name}
               href={item.href}

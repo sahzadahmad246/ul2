@@ -1,3 +1,4 @@
+// src/components/navigation/DesktopNav.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -5,7 +6,7 @@ import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
 import { useTheme } from "next-themes";
-import Image from "next/image"; // Import Next.js Image component
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Feather, Moon, Sun, Search } from "lucide-react";
@@ -33,6 +34,11 @@ export default function DesktopNav({ children }: DesktopNavProps) {
     await signIn("google", { callbackUrl: pathname || "/profile" });
   };
 
+  // Filter navItems to show Dashboard only for admin users
+  const filteredNavItems = navItems.filter(
+    (item) => item.name !== "Dashboard" || (userData?.role === "admin")
+  );
+
   return (
     <div className="max-w-7xl mx-auto flex min-h-screen">
       <aside className="fixed top-0 bottom-0 w-[240px] left-[calc(50%-640px)] border-r border-border bg-background flex flex-col py-4 z-10">
@@ -46,8 +52,8 @@ export default function DesktopNav({ children }: DesktopNavProps) {
               <Image
                 src={userData.profilePicture?.url || "/placeholder.svg"}
                 alt={userData.name || "User"}
-                width={32} // Specify width for Image component
-                height={32} // Specify height for Image component
+                width={32}
+                height={32}
                 className="rounded-full"
               />
               <div>
@@ -63,7 +69,7 @@ export default function DesktopNav({ children }: DesktopNavProps) {
         </div>
         <nav className="flex-1 w-full px-4">
           <ul className="flex flex-col gap-2">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <li key={item.name} className="w-full">
                 <Link
                   href={item.href}

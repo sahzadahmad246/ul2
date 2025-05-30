@@ -1,27 +1,39 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { ArrowLeft, MapPin, Calendar, Settings, LogOut, MoreHorizontal } from "lucide-react"
-import { formatDate } from "@/lib/utils/date"
-import type { IUser } from "@/types/userTypes"
-import EditProfileDialog from "./ProfileForm"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  Settings,
+  LogOut,
+  MoreHorizontal,
+} from "lucide-react";
+import { formatDate } from "@/lib/utils/date";
+import type { IUser } from "@/types/userTypes";
+import EditProfileDialog from "./ProfileForm";
 
 interface ProfileHeaderProps {
-  userData: IUser
-  onBack: () => void
-  onLogout: () => void
+  userData: IUser;
+  onBack: () => void;
+  onLogout: () => void;
 }
 
-export default function ProfileHeader({ userData, onBack, onLogout }: ProfileHeaderProps) {
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const dob = userData.dob ? new Date(userData.dob) : null
-  const isValidDob = dob && !isNaN(dob.getTime())
-  const shouldShowPoemCount = userData.role === "admin" || userData.role === "poet"
-
+export default function ProfileHeader({
+  userData,
+  onBack,
+  onLogout,
+}: ProfileHeaderProps) {
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const dob = userData.dob ? new Date(userData.dob) : null;
+  const isValidDob = dob && !isNaN(dob.getTime());
+  const shouldShowPoemCount =
+    userData.role === "admin" || userData.role === "poet";
+  console.log("ProfileHeader userData:", userData);
   return (
     <>
       {/* Cover Controls */}
@@ -47,17 +59,30 @@ export default function ProfileHeader({ userData, onBack, onLogout }: ProfileHea
       <div className="relative -mt-16 mb-6">
         <div className="flex justify-between items-end mb-4">
           <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
-            <AvatarImage src={userData.profilePicture?.url || "/placeholder.svg"} alt={userData.name || "User"} />
+            <AvatarImage
+              src={userData.profilePicture?.url || "/placeholder.svg"}
+              alt={userData.name || "User"}
+            />
             <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
               {userData.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)} className="rounded-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditDialog(true)}
+              className="rounded-full"
+            >
               <Settings className="h-4 w-4 mr-2" />
               Edit Profile
             </Button>
-            <Button variant="outline" size="sm" onClick={onLogout} className="rounded-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onLogout}
+              className="rounded-full"
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
@@ -75,7 +100,9 @@ export default function ProfileHeader({ userData, onBack, onLogout }: ProfileHea
             <p className="text-muted-foreground">@{userData.slug}</p>
           </div>
 
-          {userData.bio && <p className="text-sm leading-relaxed">{userData.bio}</p>}
+          {userData.bio && (
+            <p className="text-sm leading-relaxed">{userData.bio}</p>
+          )}
 
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             {userData.location && (
@@ -101,12 +128,18 @@ export default function ProfileHeader({ userData, onBack, onLogout }: ProfileHea
             {shouldShowPoemCount && (
               <div className="text-center">
                 <p className="text-xl font-bold">{userData.poemCount ?? 0}</p>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Poems</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Poems
+                </p>
               </div>
             )}
             <div className="text-center">
-              <p className="text-xl font-bold">{userData.bookmarks?.length ?? 0}</p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Bookmarks</p>
+              <p className="text-xl font-bold">
+                {userData.bookmarks?.length ?? 0}
+              </p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                Bookmarks
+              </p>
             </div>
           </div>
         </div>
@@ -114,7 +147,11 @@ export default function ProfileHeader({ userData, onBack, onLogout }: ProfileHea
 
       <Separator className="my-6" />
 
-      <EditProfileDialog open={showEditDialog} onOpenChange={setShowEditDialog} userData={userData} />
+      <EditProfileDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        userData={userData}
+      />
     </>
-  )
+  );
 }

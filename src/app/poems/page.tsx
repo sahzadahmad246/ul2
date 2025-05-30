@@ -7,7 +7,6 @@ import dbConnect from "@/lib/mongodb";
 import Poem from "@/models/Poem";
 import { IPoem, SerializedPoem, ContentItem, Bookmark, FAQ } from "@/types/poemTypes";
 
-// Utility function to serialize Mongoose document to plain object
 function serializePoem(poem: IPoem): SerializedPoem {
   return {
     ...poem,
@@ -36,11 +35,11 @@ function serializePoem(poem: IPoem): SerializedPoem {
         _id: item._id ? item._id.toString() : undefined,
       })),
     },
-    bookmarks: poem.bookmarks.map((bookmark: Bookmark) => ({
+    bookmarks: poem.bookmarks?.map((bookmark: Bookmark) => ({
       ...bookmark,
       userId: bookmark.userId.toString(),
       bookmarkedAt: bookmark.bookmarkedAt.toISOString(),
-    })),
+    })) || [], // Fallback to empty array if undefined
     faqs: poem.faqs.map((faq: FAQ) => ({
       ...faq,
       _id: faq._id ? faq._id.toString() : undefined,
@@ -54,8 +53,8 @@ export default async function PoemsPage() {
   try {
     await dbConnect();
 
-    const page = 1; // Initial page
-    const limit = 10; // Poems per page
+    const page = 1;
+    const limit = 10;
     const poems: IPoem[] = await Poem.find({ status: "published" })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
