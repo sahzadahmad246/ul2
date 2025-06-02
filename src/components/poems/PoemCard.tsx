@@ -1,76 +1,62 @@
-// src/components/poems/PoemCard.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import type { SerializedPoem } from "@/types/poemTypes";
-import { Bookmark, Eye, Share2, Clock, Sparkles } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Bookmark, Eye, Share2, Sparkles } from "lucide-react";
 import { useUserStore } from "@/store/user-store";
 import { usePoemStore } from "@/store/poem-store";
 import { toast } from "sonner";
+import type { FeedItem } from "@/types/poemTypes";
+import { formatRelativeTime } from "@/lib/utils/date";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface PoemCardProps {
-  poem: SerializedPoem;
+  feedItem: FeedItem;
 }
 
-function isPoetObject(
-  poet: {
-    _id: string;
-    name: string;
-    role?: string;
-    profilePicture?: { publicId?: string; url: string };
-    slug?: string;
-  } | null
-): poet is {
-  _id: string;
-  name: string;
-  role?: string;
-  profilePicture?: { publicId?: string; url: string };
-  slug?: string;
-} {
-  return poet !== null && typeof poet === "object" && "name" in poet;
-}
-
-export default function PoemCard({ poem }: PoemCardProps) {
+export default function PoemCard({ feedItem }: PoemCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [optimisticBookmarkCount, setOptimisticBookmarkCount] = useState(
-    poem.bookmarkCount || 0
+    feedItem.bookmarkCount || 0
   );
+  const [topicsDialogOpen, setTopicsDialogOpen] = useState(false);
   const { userData, fetchUserData } = useUserStore();
   const { bookmarkPoem } = usePoemStore();
 
   useEffect(() => {
-    if (userData?._id && poem) {
-      const userId = userData._id.toString();
+    if (userData?._id) {
       setIsBookmarked(
         userData.bookmarks?.some(
-          (b) => b.poemId.toString() === poem._id.toString()
-        ) ||
-          poem.bookmarks?.some(
-            (bookmark) => bookmark.userId.toString() === userId
-          ) ||
-          false
+          (b) => b.poemId.toString() === feedItem.poemId
+        ) || false
       );
     } else {
       setIsBookmarked(false);
     }
+    setOptimisticBookmarkCount(feedItem.bookmarkCount || 0);
+  }, [userData, feedItem]);
 
-    setOptimisticBookmarkCount(poem.bookmarkCount || 0);
-  }, [userData, poem]);
-
-  const poetName = isPoetObject(poem.poet) ? poem.poet.name : "Unknown Poet";
-  const poetImage = isPoetObject(poem.poet)
-    ? poem.poet.profilePicture?.url || "/placeholder.svg?height=48&width=48"
-    : "/placeholder.svg?height=48&width=48";
-
-  const previewCouplet = poem.content.en[0]?.couplet || "";
+  const poetName = feedItem.poet.name || "Unknown Poet";
+  const poetImage =
+    feedItem.poet.profilePicture?.url || "/placeholder.svg?height=48&width=48";
+  const poetSlug = feedItem.poet.slug || "unknown";
 
   const formatCouplet = (couplet: string) => {
-    // Only preserve line breaks that are already in the text
-    return couplet;
+    return couplet.split("\n").map((line, index) => (
+      <div key={index} className="leading-relaxed">
+        {line}
+      </div>
+    ));
   };
 
   const handleBookmark = async () => {
@@ -78,23 +64,19 @@ export default function PoemCard({ poem }: PoemCardProps) {
       toast.error("Please log in to bookmark poems");
       return;
     }
-
     setActionLoading("bookmark");
     const previousBookmarkCount = optimisticBookmarkCount;
     const previousIsBookmarked = isBookmarked;
-
     setOptimisticBookmarkCount(
       isBookmarked ? optimisticBookmarkCount - 1 : optimisticBookmarkCount + 1
     );
     setIsBookmarked(!isBookmarked);
-
     try {
       const result = await bookmarkPoem(
-        poem._id,
+        feedItem.poemId,
         userData._id,
         isBookmarked ? "remove" : "add"
       );
-
       if (result.success) {
         await fetchUserData();
         toast.success(
@@ -103,8 +85,8 @@ export default function PoemCard({ poem }: PoemCardProps) {
       } else {
         throw new Error(result.message || "Failed to update bookmark");
       }
-    } catch (error) {
-      console.error("Failed to bookmark poem:", error);
+    } catch (e: unknown) {
+      console.error("Failed to bookmark poem:", e);
       toast.error("Failed to bookmark poem");
       setIsBookmarked(previousIsBookmarked);
       setOptimisticBookmarkCount(previousBookmarkCount);
@@ -116,166 +98,231 @@ export default function PoemCard({ poem }: PoemCardProps) {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: poem.title.en,
-        text: previewCouplet,
-        url: `/poems/en/${poem.slug.en}`,
+        title: `Poem by ${poetName}`,
+        text: feedItem.couplet,
+        url: `/poems/${feedItem.language}/${feedItem.slug}`,
       });
     } else {
       navigator.clipboard.writeText(
-        `${window.location.origin}/poems/en/${poem.slug.en}`
+        `${window.location.origin}/poems/${feedItem.language}/${feedItem.slug}`
       );
       toast.success("Poem link copied to clipboard");
     }
   };
 
-  return (
-    <article className="group rounded-2xl border border-border/50 overflow-hidden bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-lg hover:border-border transition-all duration-300 hover:-translate-y-1">
-      {/* Enhanced Header */}
-      <div className="flex items-center gap-4 p-5 border-b border-border/30">
-        <div className="relative flex-shrink-0">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 overflow-hidden ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all duration-300">
-            <Image
-              src={poetImage || "/placeholder.svg?height=48&width=48"}
-              alt={`${poetName} - Poet profile picture`}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                e.currentTarget.src = "/placeholder.svg?height=48&width=48";
-              }}
-            />
-          </div>
-          <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-primary rounded-full flex items-center justify-center">
-            <Sparkles className="h-2.5 w-2.5 text-primary-foreground" />
-          </div>
-        </div>
+  const isUrdu = feedItem.language === "ur";
+  const textDirection = isUrdu ? "rtl" : "ltr";
+  const fontClass = isUrdu ? "font-noto-nastaliq" : "font-inter";
 
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
-            {poetName}
-          </h3>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>
-                {formatDistanceToNow(new Date(poem.createdAt), {
-                  addSuffix: true,
-                })}
+  return (
+    <article className="group relative rounded-3xl border border-border/40 overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-lg hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-2 hover:scale-[1.02]">
+      {/* Decorative gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      {/* Header */}
+      <div className="relative flex items-center justify-between gap-4 p-6 border-b border-border/20">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-shrink-0">
+            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 overflow-hidden ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all duration-300 shadow-lg">
+              <Image
+                src={poetImage || "/placeholder.svg"}
+                alt={`${poetName} - Poet profile picture`}
+                width={56}
+                height={56}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg?height=56&width=56";
+                }}
+              />
+            </div>
+            <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg">
+              <Sparkles className="h-3 w-3 text-primary-foreground" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <Link href={`/poets/${poetSlug}`}>
+              <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors duration-300">
+                {poetName}
+              </h3>
+            </Link>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="text-muted-foreground/80 font-medium">
+                @{poetSlug}
               </span>
             </div>
-            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-              {poem.category}
-            </span>
           </div>
+        </div>
+        <div className="text-sm text-muted-foreground font-medium font-inter bg-muted/30 px-3 py-1 rounded-full">
+          {feedItem.createdAt
+            ? formatRelativeTime(feedItem.createdAt)
+            : "Unknown"}
         </div>
       </div>
 
-      {/* Enhanced Content */}
-      <div className="p-6">
-        <Link href={`/poems/en/${poem.slug.en}`} className="block group/link">
-          {/* Poetry Content - No Title, Only Couplet */}
-          <div className="mb-6">
-            <div className="relative p-5 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/30 group-hover/link:border-primary/30 transition-all duration-300">
-              <div className="text-sm md:text-base leading-relaxed font-mono text-foreground/90 poetry-preview group-hover/link:text-primary/90 transition-colors duration-300 whitespace-pre-line">
-                {formatCouplet(previewCouplet)}
-              </div>
+      {/* Couplet with stylish vertical line */}
+      <div className="relative p-6">
+        <Link
+          href={`/poems/${feedItem.language}/${feedItem.slug}`}
+          className="block group/link"
+        >
+          <div className="relative mb-6">
+            <div
+              className={`relative ${isUrdu ? "pr-6" : "pl-6"} ${fontClass}`}
+              dir={textDirection}
+              lang={isUrdu ? "ur" : "en"}
+            >
+              {/* Stylish vertical line - left for en/hi, right for ur */}
+              <div
+                className={`absolute ${
+                  isUrdu ? "right-0" : "left-0"
+                } top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-primary/80 to-primary/40 rounded-full shadow-sm group-hover/link:shadow-primary/50 transition-all duration-300`}
+              />
+              <div
+                className={`absolute ${
+                  isUrdu ? "right-0" : "left-0"
+                } top-0 bottom-0 w-1 bg-gradient-to-b from-primary/50 to-transparent rounded-full animate-pulse opacity-0 group-hover/link:opacity-100 transition-opacity duration-300`}
+              />
 
-              {poem.content.en.length > 1 && (
-                <div className="mt-3 pt-2 border-t border-border/30">
-                  <p className="text-xs text-muted-foreground">
-                    +{poem.content.en.length - 1} more verses
-                  </p>
-                </div>
-              )}
+              <div className="text-lg md:text-xl leading-loose text-foreground/90 poetry-preview group-hover/link:text-primary/90 transition-colors duration-300 space-y-2">
+                {formatCouplet(feedItem.couplet)}
+              </div>
             </div>
           </div>
         </Link>
 
-        {/* SEO Optimized Cover Image */}
-        {poem.coverImage?.url && (
-          <Link href={`/poems/en/${poem.slug.en}`} className="block mb-6">
-            <div className="relative h-48 md:h-56 bg-muted/30 rounded-xl overflow-hidden group-hover:shadow-md transition-all duration-300">
+        {/* Cover Image */}
+        {feedItem.coverImage?.url && (
+          <Link
+            href={`/poems/${feedItem.language}/${feedItem.slug}`}
+            className="block mb-6"
+          >
+            <div className="relative h-52 md:h-64 bg-muted/30 rounded-2xl overflow-hidden group-hover:shadow-xl transition-all duration-500 border border-border/20">
               <Image
-                src={poem.coverImage.url || "/placeholder.svg"}
-                alt={`Illustration for poem by ${poetName} - ${poem.category} poetry`}
+                src={feedItem.coverImage.url || "/placeholder.svg"}
+                alt={`Illustration for poem by ${poetName}`}
                 fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                className="object-cover group-hover:scale-110 transition-transform duration-700"
                 loading="lazy"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </div>
           </Link>
         )}
 
-        {/* Enhanced Tags */}
-        {poem.topics.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {poem.topics.slice(0, 3).map((topic: string) => (
-              <span
-                key={topic}
-                className="px-3 py-1 text-xs rounded-full bg-accent/50 text-accent-foreground hover:bg-accent/70 transition-colors cursor-pointer border border-accent/30"
-              >
-                #{topic}
-              </span>
-            ))}
-            {poem.topics.length > 3 && (
-              <span className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
-                +{poem.topics.length - 3} more
-              </span>
-            )}
+        {/* Topics - Single line with dialog */}
+        {feedItem.topics.length > 0 && (
+          <div className="flex items-center gap-2 mb-4 overflow-hidden">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {feedItem.topics.slice(0, 2).map((topic: string) => (
+                <Badge
+                  key={topic}
+                  variant="secondary"
+                  className="text-xs bg-accent/40 hover:bg-accent/60 transition-colors border border-accent/30 whitespace-nowrap"
+                >
+                  #{topic}
+                </Badge>
+              ))}
+              {feedItem.topics.length > 2 && (
+                <Dialog
+                  open={topicsDialogOpen}
+                  onOpenChange={setTopicsDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-6 px-2 bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary font-medium whitespace-nowrap"
+                    >
+                      +{feedItem.topics.length - 2} more
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        All Topics
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {feedItem.topics.map((topic: string) => (
+                        <Badge
+                          key={topic}
+                          variant="secondary"
+                          className="text-sm bg-accent/50 hover:bg-accent/70 transition-colors border border-accent/30"
+                        >
+                          #{topic}
+                        </Badge>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Enhanced Actions */}
-      <div className="flex items-center border-t border-border/30 bg-muted/20 px-5 py-4">
-        <div className="flex items-center justify-around w-full">
-          <button
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-background/80 ${
-              isBookmarked
-                ? "text-primary bg-primary/10"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            onClick={handleBookmark}
-            disabled={actionLoading === "bookmark"}
-          >
-            {actionLoading === "bookmark" ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-primary border-muted" />
-            ) : (
-              <Bookmark
-                className={`h-4 w-4 transition-all duration-200 ${
-                  isBookmarked ? "fill-current scale-110" : ""
-                }`}
-              />
-            )}
-            <span className="text-sm font-medium">
-              {optimisticBookmarkCount.toLocaleString()}
-            </span>
-          </button>
+      {/* Action Bar */}
+      <div className="relative flex items-center border-t border-border/20 bg-gradient-to-r from-muted/30 to-muted/10 backdrop-blur-sm px-6 py-4">
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-1">
+            <button
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 hover:bg-background/60 hover:shadow-md ${
+                isBookmarked
+                  ? "text-primary bg-primary/15 shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={handleBookmark}
+              disabled={actionLoading === "bookmark"}
+            >
+              {actionLoading === "bookmark" ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-primary border-muted" />
+              ) : (
+                <Bookmark
+                  className={`h-4 w-4 transition-all duration-300 ${
+                    isBookmarked ? "fill-current scale-110" : ""
+                  }`}
+                />
+              )}
+              <span className="text-sm font-semibold font-inter">
+                {optimisticBookmarkCount.toLocaleString()}
+              </span>
+            </button>
 
-          <div className="flex items-center gap-2 px-3 py-2 text-muted-foreground">
-            <Eye className="h-4 w-4 text-blue-500" />
-            <span className="text-sm font-medium">
-              {(poem.viewsCount || 0).toLocaleString()}
-            </span>
+            <div className="flex items-center gap-2 px-4 py-2 text-muted-foreground">
+              <Eye className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-semibold font-inter">
+                {(feedItem.viewsCount || 0).toLocaleString()}
+              </span>
+            </div>
           </div>
 
           <button
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-background/80 transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-background/60 hover:shadow-md transition-all duration-300"
             onClick={handleShare}
           >
             <Share2 className="h-4 w-4" />
-            <span className="text-sm font-medium hidden sm:inline">Share</span>
+            <span className="text-sm font-semibold font-inter hidden sm:inline">
+              Share
+            </span>
           </button>
         </div>
       </div>
 
       <style jsx>{`
         .poetry-preview {
-          line-height: 1.7;
-          letter-spacing: 0.01em;
+          line-height: 2.4;
+          letter-spacing: 0.02em;
+        }
+        .font-noto-nastaliq {
+          font-family: var(--font-noto-nastaliq), "Noto Nastaliq Urdu",
+            sans-serif;
+          font-size: 1.25rem;
+        }
+        .font-inter {
+          font-family: var(--font-inter), "Inter", sans-serif;
         }
       `}</style>
     </article>

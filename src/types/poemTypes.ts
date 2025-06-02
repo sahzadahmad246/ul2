@@ -1,4 +1,3 @@
-// src/types/poemTypes.ts
 export interface ProfilePicture {
   publicId?: string;
   url: string;
@@ -15,7 +14,7 @@ export interface Poet {
 export interface ContentItem {
   couplet: string;
   meaning?: string;
-  _id?: string; // Optional to handle potential _id in subdocuments
+  _id?: string;
 }
 
 export interface Bookmark {
@@ -26,7 +25,7 @@ export interface Bookmark {
 export interface FAQ {
   question: { en?: string; hi?: string; ur?: string };
   answer: { en?: string; hi?: string; ur?: string };
-  _id?: string; // Optional to handle potential _id in subdocuments
+  _id?: string;
 }
 
 export interface IPoem {
@@ -78,7 +77,6 @@ export interface IPoem {
   viewsCount: number;
   createdAt: Date;
   updatedAt: Date;
- 
 }
 
 export interface SerializedPoem extends Omit<IPoem, 'createdAt' | 'updatedAt' | 'bookmarks'> {
@@ -91,4 +89,35 @@ export interface SerializedPoem extends Omit<IPoem, 'createdAt' | 'updatedAt' | 
     ur: Array<ContentItem & { _id?: string }>;
   };
   faqs: Array<FAQ & { _id?: string }>;
+}
+
+export interface FeedItem {
+  id: string;
+  poemId: string;
+  poet: {
+    name: string;
+    profilePicture?: {
+      publicId?: string;
+      url?: string;
+    };
+    slug: string;
+  };
+  language: string;
+  slug: string;
+  couplet: string;
+  coverImage?: {
+    publicId: string;
+    url: string;
+  } | null;
+  viewsCount: number;
+  bookmarkCount: number;
+  topics: string[];
+  category?: string;
+  createdAt?: Date;
+}
+export interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
 }

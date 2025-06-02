@@ -130,7 +130,7 @@ export default async function PoemPage({ params }: PoemPageProps) {
     .lean();
 
   if (!poem || !["en", "hi", "ur"].includes(lang)) {
-    console.log("Poem not found for slug:", slug, "lang:", lang);
+    
     notFound();
   }
 

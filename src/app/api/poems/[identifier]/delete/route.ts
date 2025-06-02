@@ -1,3 +1,4 @@
+// source: src/app/api/poems/[identifier]/delete/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { Types } from "mongoose";
@@ -7,7 +8,15 @@ import User from "@/models/User";
 import { authOptions } from "@/lib/auth/authOptions";
 import { deleteImage } from "@/lib/utils/cloudinary";
 
-export async function DELETE(req: NextRequest, { params }: { params: { identifier: string } }) {
+// Define the RouteParams interface with params as a Promise
+interface RouteParams {
+  params: Promise<{ identifier: string }>;
+}
+
+export async function DELETE(
+  req: NextRequest,
+  context: RouteParams
+) {
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
@@ -15,7 +24,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { identifie
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const { identifier } = params;
+    // Await the params to resolve the Promise
+    const { identifier } = await context.params;
     const poem = Types.ObjectId.isValid(identifier)
       ? await Poem.findById(identifier)
       : await Poem.findOne({
@@ -41,7 +51,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { identifie
       return NextResponse.json({ message: "Forbidden: Only admins can delete poems without an owner" }, { status: 403 });
     } else if (poem.poet && poem.poet.toString() !== session.user.id && currentUser.role !== "admin") {
       // If poet exists, only the poet or admins can delete
-      return NextResponse.json({ message: "Forbidden: Only admins can delete poems without an owner" }, { status: 403 });
+      return NextResponse.json({ message: "Forbidden: Only the poet or admins can delete this poem" }, { status: 403 });
     }
 
     // Delete cover image from Cloudinary if it exists

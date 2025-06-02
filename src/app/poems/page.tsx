@@ -1,124 +1,87 @@
-// src/app/poems/page.tsx
-import { notFound } from "next/navigation";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import PoemList from "@/components/poems/PoemList";
-import { BookOpen } from "lucide-react";
-import dbConnect from "@/lib/mongodb";
-import Poem from "@/models/Poem";
-import { IPoem, SerializedPoem, ContentItem, Bookmark, FAQ } from "@/types/poemTypes";
+import { notFound } from "next/navigation"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import EnhancedPoemList from "@/components/poems/PoemList"
+import { BookOpen, Sparkles, Heart } from "lucide-react"
+import type { FeedItem, Pagination } from "@/types/poemTypes"
 
-function serializePoem(poem: IPoem): SerializedPoem {
-  return {
-    ...poem,
-    _id: poem._id.toString(),
-    poet: poem.poet
-      ? {
-          ...poem.poet,
-          _id: poem.poet._id.toString(),
-          name: poem.poet.name || "Unknown Poet",
-          profilePicture: poem.poet.profilePicture || {
-            url: "/placeholder.svg?height=64&width=64",
-          },
-        }
-      : { _id: "", name: "Unknown Poet", profilePicture: { url: "/placeholder.svg?height=64&width=64" } },
-    content: {
-      en: poem.content.en.map((item: ContentItem) => ({
-        ...item,
-        _id: item._id ? item._id.toString() : undefined,
-      })),
-      hi: poem.content.hi.map((item: ContentItem) => ({
-        ...item,
-        _id: item._id ? item._id.toString() : undefined,
-      })),
-      ur: poem.content.ur.map((item: ContentItem) => ({
-        ...item,
-        _id: item._id ? item._id.toString() : undefined,
-      })),
-    },
-    bookmarks: poem.bookmarks?.map((bookmark: Bookmark) => ({
-      ...bookmark,
-      userId: bookmark.userId.toString(),
-      bookmarkedAt: bookmark.bookmarkedAt.toISOString(),
-    })) || [], // Fallback to empty array if undefined
-    faqs: poem.faqs.map((faq: FAQ) => ({
-      ...faq,
-      _id: faq._id ? faq._id.toString() : undefined,
-    })),
-    createdAt: poem.createdAt.toISOString(),
-    updatedAt: poem.updatedAt.toISOString(),
-  };
-}
-
-export default async function PoemsPage() {
+export default async function EnhancedPoemsPage() {
   try {
-    await dbConnect();
+    const page = 1
+    const limit = 10
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
+    const url = `${baseUrl}/api/poems/feed?page=${page}&limit=${limit}`
 
-    const page = 1;
-    const limit = 10;
-    const poems: IPoem[] = await Poem.find({ status: "published" })
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate("poet", "name slug profilePicture")
-      .lean();
+    const response = await fetch(url, {
+      credentials: "include",
+      next: { revalidate: 60 },
+    })
 
-    const total = await Poem.countDocuments({ status: "published" });
-    const pagination = {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    };
+    if (!response.ok) {
+      throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`)
+    }
 
-    if (!poems.length) {
+    const data = await response.json().catch(() => {
+      throw new Error("Invalid response format from feed API")
+    })
+
+    const { items: feedItems, pagination }: { items: FeedItem[]; pagination: Pagination } = data
+
+    if (!feedItems.length) {
       return (
-        <div className="min-h-screen bg-background">
-          <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <Card className="mb-8">
-              <CardHeader className="text-center">
-                <CardTitle className="text-3xl flex items-center justify-center gap-2">
-                  <BookOpen className="h-8 w-8" />
-                  Poetry Collection
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+          <div className="container mx-auto px-4 py-12 max-w-5xl">
+            <Card className="mb-12 border-border/40 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-xl">
+              <CardHeader className="text-center py-12">
+                <div className="relative mb-6">
+                  <div className="h-20 w-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
+                    <BookOpen className="h-10 w-10 text-primary" />
+                  </div>
+                  <Sparkles className="absolute top-2 right-1/3 h-6 w-6 text-primary/60 animate-pulse" />
+                  <Heart className="absolute bottom-2 left-1/3 h-5 w-5 text-accent/60 animate-pulse delay-300" />
+                </div>
+                <CardTitle className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
+                  Poetry Feed
                 </CardTitle>
-                <p className="text-muted-foreground">
-                  Discover beautiful poetry from talented poets around the world
+                <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
+                  Discover beautiful poetry from talented poets around the world and let their words inspire your soul
                 </p>
               </CardHeader>
             </Card>
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📝</div>
-              <h3 className="text-lg font-medium mb-2">No poems yet</h3>
-              <p className="text-muted-foreground">
-                Be the first to share your poetry with the world.
-              </p>
+            <div className="text-center py-20">
+              <div className="text-8xl mb-6">📝</div>
+              <h3 className="text-2xl font-bold mb-4">No poems yet</h3>
+              <p className="text-muted-foreground text-lg">Be the first to share your poetry with the world.</p>
             </div>
           </div>
         </div>
-      );
+      )
     }
 
-    const serializedPoems = poems.map(serializePoem);
-
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <Card className="mb-8">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl flex items-center justify-center gap-2">
-                <BookOpen className="h-8 w-8" />
-                Poetry Collection
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="container mx-auto px-4 py-12 max-w-5xl">
+          <Card className="mb-12 border-border/40 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-xl">
+            <CardHeader className="text-center py-12">
+              <div className="relative mb-6">
+                <div className="h-20 w-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
+                  <BookOpen className="h-10 w-10 text-primary" />
+                </div>
+                <Sparkles className="absolute top-2 right-1/3 h-6 w-6 text-primary/60 animate-pulse" />
+                <Heart className="absolute bottom-2 left-1/3 h-5 w-5 text-accent/60 animate-pulse delay-300" />
+              </div>
+              <CardTitle className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
+                Poetry Feed
               </CardTitle>
-              <p className="text-muted-foreground">
-                Discover beautiful poetry from talented poets around the world
+              <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
+                Discover beautiful poetry from talented poets around the world and let their words inspire your soul
               </p>
             </CardHeader>
           </Card>
-          <PoemList initialPoems={serializedPoems} initialPagination={pagination} />
+          <EnhancedPoemList initialFeedItems={feedItems} initialPagination={pagination} />
         </div>
       </div>
-    );
-  } catch (error) {
-    console.error("Error in PoemsPage:", error);
-    notFound();
+    )
+  } catch {
+    notFound()
   }
 }

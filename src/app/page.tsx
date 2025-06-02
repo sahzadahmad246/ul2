@@ -1,69 +1,87 @@
-'use client'
+import { notFound } from "next/navigation"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import EnhancedPoemList from "@/components/poems/PoemList"
+import { BookOpen, Sparkles, Heart } from "lucide-react"
+import type { FeedItem, Pagination } from "@/types/poemTypes"
 
-import Image from 'next/image'
+export default async function EnhancedPoemsPage() {
+  try {
+    const page = 1
+    const limit = 10
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ""
+    const url = `${baseUrl}/api/poems/feed?page=${page}&limit=${limit}`
 
-export default function Home() {
-  return (
-    <div className="space-y-8">
-      {/* Social Media Feed/Timeline */}
-      <div className="space-y-6">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="rounded-lg border border-border overflow-hidden bg-card shadow-sm">
-            {/* Post Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-border">
-              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-muted overflow-hidden">
-                <Image
-                  src={`/placeholder.svg?height=40&width=40&text=P${i}`}
-                  alt={`Poet ${i}`}
-                  width={40}
-                  height={40}
-                />
-              </div>
-              <div>
-                <h3 className="font-medium text-sm">Famous Poet {i}</h3>
-                <p className="text-xs text-muted-foreground">{i * 2} hours ago</p>
-              </div>
-            </div>
+    const response = await fetch(url, {
+      credentials: "include",
+      next: { revalidate: 60 },
+    })
 
-            {/* Post Content */}
-            <div className="p-5">
-              <p className="text-sm mb-4 whitespace-pre-line">
-                {i % 2 === 0
-                  ? "The moon hangs like a crescent blade,\nCutting through the velvet night.\nStars scatter like diamond dust,\nIn the wake of its silver light."
-                  : "In the garden of my heart,\nMemories bloom like wildflowers.\nSome sweet as morning dew,\nOthers sharp as thorns."}
-              </p>
+    if (!response.ok) {
+      throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`)
+    }
 
-              {i % 3 === 0 && (
-                <div className="h-48 bg-muted rounded-md mb-4 flex items-center justify-center overflow-hidden">
-                  <Image
-                    src={`/placeholder.svg?height=192&width=500&text=Poem+Image+${i}`}
-                    alt="Poem illustration"
-                    width={500}
-                    height={192}
-                    className="w-full h-full object-cover"
-                  />
+    const data = await response.json().catch(() => {
+      throw new Error("Invalid response format from feed API")
+    })
+
+    const { items: feedItems, pagination }: { items: FeedItem[]; pagination: Pagination } = data
+
+    if (!feedItems.length) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+          <div className="container mx-auto px-4 py-12 max-w-5xl">
+            <Card className="mb-12 border-border/40 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-xl">
+              <CardHeader className="text-center py-12">
+                <div className="relative mb-6">
+                  <div className="h-20 w-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
+                    <BookOpen className="h-10 w-10 text-primary" />
+                  </div>
+                  <Sparkles className="absolute top-2 right-1/3 h-6 w-6 text-primary/60 animate-pulse" />
+                  <Heart className="absolute bottom-2 left-1/3 h-5 w-5 text-accent/60 animate-pulse delay-300" />
                 </div>
-              )}
-
-              {/* Post Tags */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {["Poetry", i % 2 === 0 ? "Nature" : "Love", i % 3 === 0 ? "Life" : "Philosophy"].map((tag) => (
-                  <span key={tag} className="px-2 py-1 text-xs rounded-md bg-accent/50 text-accent-foreground">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Post Actions */}
-            <div className="flex border-t border-border">
-              <button className="flex-1 p-3 text-sm font-medium hover:bg-accent/50 transition-colors">Like</button>
-              <button className="flex-1 p-3 text-sm font-medium hover:bg-accent/50 transition-colors">Comment</button>
-              <button className="flex-1 p-3 text-sm font-medium hover:bg-accent/50 transition-colors">Share</button>
+                <CardTitle className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
+                  Poetry Feed
+                </CardTitle>
+                <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
+                  Discover beautiful poetry from talented poets around the world and let their words inspire your soul
+                </p>
+              </CardHeader>
+            </Card>
+            <div className="text-center py-20">
+              <div className="text-8xl mb-6">📝</div>
+              <h3 className="text-2xl font-bold mb-4">No poems yet</h3>
+              <p className="text-muted-foreground text-lg">Be the first to share your poetry with the world.</p>
             </div>
           </div>
-        ))}
+        </div>
+      )
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="container mx-auto px-4 py-12 max-w-5xl">
+          <Card className="mb-12 border-border/40 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-xl">
+            <CardHeader className="text-center py-12">
+              <div className="relative mb-6">
+                <div className="h-20 w-20 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
+                  <BookOpen className="h-10 w-10 text-primary" />
+                </div>
+                <Sparkles className="absolute top-2 right-1/3 h-6 w-6 text-primary/60 animate-pulse" />
+                <Heart className="absolute bottom-2 left-1/3 h-5 w-5 text-accent/60 animate-pulse delay-300" />
+              </div>
+              <CardTitle className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-4">
+                Poetry Feed
+              </CardTitle>
+              <p className="text-muted-foreground text-lg md:text-xl leading-relaxed max-w-2xl mx-auto">
+                Discover beautiful poetry from talented poets around the world and let their words inspire your soul
+              </p>
+            </CardHeader>
+          </Card>
+          <EnhancedPoemList initialFeedItems={feedItems} initialPagination={pagination} />
+        </div>
       </div>
-    </div>
-  )
+    )
+  } catch {
+    notFound()
+  }
 }
