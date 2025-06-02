@@ -11,14 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  Eye,
-  Heart,
-  Share2,
-  ChevronLeft,
-  ChevronRight,
-  Bookmark,
-} from "lucide-react";
+import { Eye, Share2, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils/date";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -145,7 +138,7 @@ export default function PoetWorksContent({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4">
       {/* Header Section */}
       <Card>
         <CardHeader className="pb-3">
@@ -173,9 +166,9 @@ export default function PoetWorksContent({
         </CardHeader>
       </Card>
 
-      {/* Poems List - One per row */}
+      {/* Custom Poem Cards */}
       {worksData.poems.length > 0 ? (
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-4">
           {worksData.poems.map((poem) => (
             <Card
               key={poem._id}
@@ -205,13 +198,18 @@ export default function PoetWorksContent({
                     </div>
                   </div>
 
-                  {/* First Couplet */}
+                  {/* First Couplet with Vertical Line */}
                   <Link
                     href={`/poems/en/${poem.slug.en || poem._id}`}
                     className="block"
                   >
-                    <div className="bg-muted/30 rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors">
-                      <div className="text-sm sm:text-base leading-relaxed font-serif whitespace-pre-line text-foreground/90">
+                    <div className="relative pl-4 py-2">
+                      {/* Vertical gradient line */}
+                      <div
+                        className=" mr-8 absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-foreground via-foreground/60 to-foreground/20 dark:from-white dark:via-white/60 dark:to-white/20 rounded-full"
+                      />
+
+                      <div className="text-sm sm:text-base leading-relaxed font-serif whitespace-pre-line text-foreground/90 hover:text-foreground transition-colors">
                         {getFirstCouplet(poem)}
                       </div>
                     </div>
@@ -225,7 +223,7 @@ export default function PoetWorksContent({
                         <span>{poem.viewsCount || 0}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
+                        <Bookmark className="h-4 w-4" />
                         <span>{poem.bookmarkCount || 0}</span>
                       </div>
                     </div>

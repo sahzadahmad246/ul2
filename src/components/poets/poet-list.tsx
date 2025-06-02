@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search, Filter, Grid, List, Users } from "lucide-react"
+import { Search, Filter, Users } from "lucide-react"
 import { usePoetStore } from "@/store/poet-store"
 import PoetCard from "./poet-card"
 import PoetCardSkeleton from "./poet-card-skeleton"
@@ -12,7 +12,6 @@ import PoetCardSkeleton from "./poet-card-skeleton"
 export default function PoetList() {
   const { poets, loading, error, fetchAllPoets } = usePoetStore()
   const [searchQuery, setSearchQuery] = useState("")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
@@ -26,8 +25,7 @@ export default function PoetList() {
     return poets.filter(
       (poet) =>
         poet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        poet.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        poet.location?.toLowerCase().includes(searchQuery.toLowerCase()),
+        poet.bio?.toLowerCase().includes(searchQuery.toLowerCase()),
     )
   }, [poets, searchQuery])
 
@@ -48,30 +46,10 @@ export default function PoetList() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Discover Poets</h1>
-        </div>
-
-        {/* View Mode Toggle */}
-        <div className="flex gap-1 p-1 bg-muted rounded-lg">
-          <Button
-            variant={viewMode === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("grid")}
-            className="h-8"
-          >
-            <Grid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="h-8"
-          >
-            <List className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
@@ -82,7 +60,7 @@ export default function PoetList() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search poets by name, bio, or location..."
+                placeholder="Search poets by name or bio..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-background"
@@ -103,25 +81,15 @@ export default function PoetList() {
         </p>
       </div>
 
-      {/* Poets Grid/List */}
+      {/* Poets List - Two cards per row */}
       {loading ? (
-        <div
-          className={`grid gap-6 ${
-            viewMode === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
-          }`}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {[...Array(8)].map((_, i) => (
             <PoetCardSkeleton key={i} />
           ))}
         </div>
       ) : filteredPoets.length > 0 ? (
-        <div
-          className={`grid gap-6 ${
-            viewMode === "grid"
-              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              : "grid-cols-1 max-w-2xl mx-auto"
-          }`}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {filteredPoets.map((poet) => (
             <PoetCard key={poet._id} poet={poet} />
           ))}

@@ -1,73 +1,76 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { FileText, MapPin, User } from 'lucide-react'
-import Link from "next/link"
-import type { IPoet } from "@/types/userTypes"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { FileText, User, Crown } from "lucide-react";
+import Link from "next/link";
+import type { IPoet } from "@/types/userTypes";
 
 interface PoetCardProps {
-  poet: IPoet
+  poet: IPoet;
 }
 
 export default function PoetCard({ poet }: PoetCardProps) {
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-border bg-card">
-      <CardContent className="p-6">
-        <div className="flex flex-col items-center text-center space-y-4">
+    <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-border bg-card overflow-hidden">
+      <CardContent className="p-0">
+        <div className="flex items-center p-4 relative">
           {/* Profile Picture */}
-          <Avatar className="h-20 w-20 ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">
-            <AvatarImage 
-              src={poet.profilePicture?.url || "/placeholder.svg"} 
-              alt={poet.name}
-              className="object-cover"
-            />
-            <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-lg font-semibold">
-              {poet.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative mr-4">
+            <Avatar className="h-16 w-16 ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">
+              <AvatarImage
+                src={poet.profilePicture?.url || "/placeholder.svg"}
+                alt={poet.name}
+                className="object-cover"
+              />
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-lg font-semibold">
+                {poet.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
 
-          {/* Poet Info */}
-          <div className="space-y-2 w-full">
-            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
-              {poet.name}
-            </h3>
-            
-            {poet.bio && (
-              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                {poet.bio}
-              </p>
-            )}
-
-            {poet.location && (
-              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                <span>{poet.location}</span>
-              </div>
-            )}
+            <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-yellow-500 rounded-full flex items-center justify-center shadow-sm">
+              <Crown className="h-3 w-3 text-white" />
+            </div>
           </div>
 
-          {/* Poem Count Badge */}
-          <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-            <FileText className="h-3 w-3 mr-1" />
-            {poet.poemCount} {poet.poemCount === 1 ? 'Poem' : 'Poems'}
-          </Badge>
+          {/* Poet Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors truncate">
+              {poet.name}
+            </h3>
+            <p className="text-sm text-muted-foreground truncate">
+              @{poet.slug}
+            </p>
+          </div>
 
-          {/* View Profile Button */}
-          <Button 
-            asChild 
-            className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all"
-            variant="outline"
+          {/* Poem Count Badge - Top Right */}
+          <Badge
+            variant="secondary"
+            className="absolute top-0 right-4 bg-primary/10 text-primary hover:bg-primary/20"
           >
-            <Link href={`/poet/${poet.slug}`}>
-              <User className="h-4 w-4 mr-2" />
-              View Profile
-            </Link>
-          </Button>
+            <FileText className="h-3 w-3 mr-1" />
+            {poet.poemCount}
+          </Badge>
         </div>
+
+        {/* View Profile Button */}
+        <Button
+          asChild
+          className="w-full rounded-none h-12 group-hover:bg-primary group-hover:text-primary-foreground transition-all"
+          variant="ghost"
+        >
+          <Link href={`/poet/${poet.slug}`}>
+            <User className="h-4 w-4 mr-2" />
+            View Profile
+          </Link>
+        </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

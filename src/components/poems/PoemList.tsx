@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useFeedStore } from "@/store/feed-store"
-import EnhancedPoemCard from "./PoemCard"
+import PoemCard from "./PoemCard"
 import { Button } from "@/components/ui/button"
 import { Loader2, RefreshCw, AlertCircle, BookOpen, Sparkles, Heart } from "lucide-react"
 import type { FeedItem, Pagination } from "@/types/poemTypes"
@@ -76,22 +76,22 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
 
   if (error) {
     return (
-      <div className="text-center py-20">
-        <div className="max-w-md mx-auto space-y-8">
+      <div className="text-center py-12 sm:py-20 px-4">
+        <div className="max-w-md mx-auto space-y-6 sm:space-y-8">
           <div className="relative">
-            <div className="h-20 w-20 mx-auto bg-gradient-to-br from-destructive/20 to-destructive/10 rounded-full flex items-center justify-center">
-              <AlertCircle className="h-10 w-10 text-destructive" />
+            <div className="h-16 sm:h-20 w-16 sm:w-20 mx-auto bg-gradient-to-br from-destructive/20 to-destructive/10 rounded-full flex items-center justify-center">
+              <AlertCircle className="h-8 sm:h-10 w-8 sm:w-10 text-destructive" />
             </div>
-            <div className="absolute inset-0 h-20 w-20 mx-auto animate-ping opacity-20">
+            <div className="absolute inset-0 h-16 sm:h-20 w-16 sm:w-20 mx-auto animate-ping opacity-20">
               <div className="h-full w-full bg-destructive rounded-full" />
             </div>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-2xl font-bold text-foreground">Oops! Something went wrong</h3>
-            <p className="text-muted-foreground text-lg leading-relaxed">{error}</p>
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-xl sm:text-2xl font-bold text-foreground">Oops! Something went wrong</h3>
+            <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">{error}</p>
           </div>
           <Button onClick={handleRetry} size="lg" className="gap-2 shadow-lg">
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className="h-4 sm:h-5 w-4 sm:w-5" />
             Try Again
           </Button>
         </div>
@@ -101,25 +101,25 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
 
   if (feedItems.length === 0 && !loading && isInitialized) {
     return (
-      <div className="text-center py-24">
-        <div className="max-w-lg mx-auto space-y-8">
+      <div className="text-center py-16 sm:py-24 px-4">
+        <div className="max-w-lg mx-auto space-y-6 sm:space-y-8">
           <div className="relative">
-            <div className="h-24 w-24 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
-              <BookOpen className="h-12 w-12 text-primary" />
+            <div className="h-20 sm:h-24 w-20 sm:w-24 mx-auto bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
+              <BookOpen className="h-10 sm:h-12 w-10 sm:w-12 text-primary" />
             </div>
-            <Sparkles className="absolute top-2 right-1/3 h-6 w-6 text-primary/60 animate-pulse" />
-            <Heart className="absolute bottom-2 left-1/3 h-5 w-5 text-accent/60 animate-pulse delay-300" />
+            <Sparkles className="absolute top-2 right-1/3 h-5 sm:h-6 w-5 sm:w-6 text-primary/60 animate-pulse" />
+            <Heart className="absolute bottom-2 left-1/3 h-4 sm:h-5 w-4 sm:w-5 text-accent/60 animate-pulse delay-300" />
           </div>
-          <div className="space-y-4">
-            <h3 className="text-3xl font-bold text-foreground">No poems yet</h3>
-            <p className="text-muted-foreground text-lg leading-relaxed">
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-2xl sm:text-3xl font-bold text-foreground">No poems yet</h3>
+            <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
               Be the first to share your poetry with the world and inspire others with your beautiful words.
             </p>
           </div>
           <div className="pt-4">
             <Button asChild size="lg" className="gap-2 shadow-lg">
               <a href="/create">
-                <Sparkles className="h-5 w-5" />
+                <Sparkles className="h-4 sm:h-5 w-4 sm:w-5" />
                 Create Your First Poem
               </a>
             </Button>
@@ -130,56 +130,58 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
   }
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-8 md:gap-10">
+    <div className="space-y-6 md:space-y-4 max-w-full">
+      <div className="grid gap-6 md:gap-8 lg:gap-10 max-w-full">
         {feedItems.map((item, index) => (
           <div
             key={item.id}
-            className="animate-in fade-in-50 slide-in-from-bottom-6"
+            className="animate-in fade-in-50 slide-in-from-bottom-6 w-full overflow-hidden"
             style={{
               animationDelay: `${(index % 10) * 150}ms`,
               animationFillMode: "both",
             }}
           >
-            <EnhancedPoemCard feedItem={item} />
+            <PoemCard feedItem={item} />
           </div>
         ))}
       </div>
 
       {loading && (
-        <div className="flex flex-col items-center justify-center py-16 space-y-6">
+        <div className="flex flex-col items-center justify-center py-8 sm:py-16 space-y-4 sm:space-y-6">
           <div className="relative">
-            <div className="h-12 w-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="h-10 sm:h-12 w-10 sm:w-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
+              <Loader2 className="h-5 sm:h-6 w-5 sm:w-6 animate-spin text-primary" />
             </div>
-            <div className="absolute inset-0 h-12 w-12 animate-ping opacity-20">
+            <div className="absolute inset-0 h-10 sm:h-12 w-10 sm:w-12 animate-ping opacity-20">
               <div className="h-full w-full bg-primary rounded-full" />
             </div>
           </div>
-          <p className="text-lg text-muted-foreground animate-pulse font-medium">Loading more beautiful poetry...</p>
+          <p className="text-base sm:text-lg text-muted-foreground animate-pulse font-medium">
+            Loading more beautiful poetry...
+          </p>
         </div>
       )}
 
       {pagination && pagination.page < pagination.pages && <div ref={loadMoreRef} className="h-8 w-full" />}
 
       {pagination && pagination.page >= pagination.pages && feedItems.length > 0 && (
-        <div className="text-center py-16 space-y-6">
+        <div className="text-center py-8 sm:py-16 space-y-4 sm:space-y-6 px-4">
           <div className="relative inline-block">
-            <div className="h-16 w-16 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
-              <BookOpen className="h-8 w-8 text-primary" />
+            <div className="h-12 sm:h-16 w-12 sm:w-16 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center shadow-lg">
+              <BookOpen className="h-6 sm:h-8 w-6 sm:w-8 text-primary" />
             </div>
-            <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-primary/60" />
+            <Sparkles className="absolute -top-1 -right-1 h-5 sm:h-6 w-5 sm:w-6 text-primary/60" />
           </div>
-          <div className="space-y-3">
-            <p className="text-2xl font-bold text-foreground">You have reached the end!</p>
-            <p className="text-muted-foreground text-lg">
+          <div className="space-y-2 sm:space-y-3">
+            <p className="text-xl sm:text-2xl font-bold text-foreground">You have reached the end!</p>
+            <p className="text-muted-foreground text-base sm:text-lg">
               You have explored all {feedItems.length} beautiful poems in our feed.
             </p>
           </div>
           <div className="pt-4">
             <Button variant="outline" asChild size="lg" className="gap-2 shadow-md">
               <a href="#top">
-                <RefreshCw className="h-5 w-5" />
+                <RefreshCw className="h-4 sm:h-5 w-4 sm:w-5" />
                 Back to Top
               </a>
             </Button>

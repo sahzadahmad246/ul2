@@ -1,57 +1,62 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
-import { IPoet } from "@/types/userTypes";
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get("page") || "1");
+    const limit = parseInt(url.searchParams.get("limit") || "10");
+    const random = url.searchParams.get("random") === "true";
     const skip = (page - 1) * limit;
 
-    const users = await User.find({ role: "poet" })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    let poets;
+    let total;
 
-    const total = await User.countDocuments({ role: "poet" });
+    if (random) {
+      poets = await User.aggregate([
+        { $match: { role: { $in: ["poet", "admin"] } } },
+        { $sample: { size: limit } },
+        {
+          $project: {
+            name: 1,
+            slug: 1,
+            profilePicture: 1,
+            bio: 1,
+            poemCount: 1,
+            createdAt: 1,
+          },
+        },
+      ]);
+      total = await User.countDocuments({ role: { $in: ["poet", "admin"] } });
+    } else {
+      poets = await User.find({ role: { $in: ["poet", "admin"] } })
+        .skip(skip)
+        .limit(limit)
+        .select("name slug profilePicture bio poemCount createdAt")
+        .lean();
+      total = await User.countDocuments({ role: { $in: ["poet", "admin"] } });
+    }
 
-    const poetsResponse: IPoet[] = users.map((user) => ({
-      ...user,
-      _id: user._id.toString(),
-      role: "poet",
-      dob: user.dob ? new Date(user.dob).toISOString() : undefined,
-      createdAt: new Date(user.createdAt).toISOString(),
-      updatedAt: new Date(user.updatedAt).toISOString(),
-      bookmarks: user.bookmarks?.length
-        ? user.bookmarks.map((bookmark) => ({
-            poemId: bookmark.poemId?.toString() || "",
-            bookmarkedAt: bookmark.bookmarkedAt
-              ? new Date(bookmark.bookmarkedAt).toISOString()
-              : new Date().toISOString(),
-          }))
-        : [],
-      poems: user.poems?.length
-        ? user.poems.map((poem) => ({
-            poemId: poem.poemId?.toString() || "",
-          }))
-        : [],
+    // Serialize dates to ISO strings
+    const poetsResponse = poets.map((poet) => ({
+      ...poet,
+      _id: poet._id.toString(),
+      createdAt: new Date(poet.createdAt).toISOString(),
+      updatedAt: poet.updatedAt ? new Date(poet.updatedAt).toISOString() : undefined,
     }));
 
     return NextResponse.json({
       poets: poetsResponse,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: `Internal server error: ${errorMessage}` }, { status: 500 });
+    console.error("Poets API error:", errorMessage);
+    return NextResponse.json(
+      { message: "Server error", error: errorMessage },
+      { status: 500 }
+    );
   }
 }

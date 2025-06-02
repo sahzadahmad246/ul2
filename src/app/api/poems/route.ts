@@ -22,29 +22,71 @@ interface PoemFormData {
   [key: string]: unknown;
 }
 
+
+
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = parseInt(url.searchParams.get("limit") || "10");
+    const random = url.searchParams.get("random") === "true";
     const skip = (page - 1) * limit;
 
-    const poems = await Poem.find({ status: "published" })
-      .skip(skip)
-      .limit(limit)
-      .populate("poet", "name slug")
-      .select("-__v")
-      .lean();
-    const total = await Poem.countDocuments({ status: "published" });
+    let poems;
+    let total;
+
+    if (random) {
+      poems = await Poem.aggregate([
+        { $match: { status: "published" } },
+        { $sample: { size: limit } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "poet",
+            foreignField: "_id",
+            as: "poet",
+          },
+        },
+        { $unwind: "$poet" },
+        {
+          $project: {
+            title: 1,
+            slug: 1,
+            content: 1,
+            summary: 1,
+            topics: 1,
+            category: 1,
+            coverImage: 1,
+            viewsCount: 1,
+            bookmarkCount: 1,
+            createdAt: 1,
+            "poet.name": 1,
+            "poet.slug": 1,
+            "poet.profilePicture": 1,
+          },
+        },
+      ]);
+      total = await Poem.countDocuments({ status: "published" });
+    } else {
+      poems = await Poem.find({ status: "published" })
+        .skip(skip)
+        .limit(limit)
+        .populate("poet", "name slug profilePicture")
+        .select("title slug content summary topics category coverImage viewsCount bookmarkCount createdAt")
+        .lean();
+      total = await Poem.countDocuments({ status: "published" });
+    }
 
     return NextResponse.json({
       poems,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
-  } catch {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Poems API error:", errorMessage);
     return NextResponse.json(
-      { message: "Server error", error: "Unknown error" },
+      { message: "Server error", error: errorMessage },
       { status: 500 }
     );
   }

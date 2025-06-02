@@ -1,99 +1,78 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Bookmark, Eye, Share2, Sparkles } from "lucide-react";
-import { useUserStore } from "@/store/user-store";
-import { usePoemStore } from "@/store/poem-store";
-import { toast } from "sonner";
-import type { FeedItem } from "@/types/poemTypes";
-import { formatRelativeTime } from "@/lib/utils/date";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import { Bookmark, Eye, Share2, Sparkles } from "lucide-react"
+import { useUserStore } from "@/store/user-store"
+import { usePoemStore } from "@/store/poem-store"
+import { toast } from "sonner"
+import type { FeedItem } from "@/types/poemTypes"
+import { formatRelativeTime } from "@/lib/utils/date"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 
 interface PoemCardProps {
-  feedItem: FeedItem;
+  feedItem: FeedItem
 }
 
 export default function PoemCard({ feedItem }: PoemCardProps) {
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [optimisticBookmarkCount, setOptimisticBookmarkCount] = useState(
-    feedItem.bookmarkCount || 0
-  );
-  const [topicsDialogOpen, setTopicsDialogOpen] = useState(false);
-  const { userData, fetchUserData } = useUserStore();
-  const { bookmarkPoem } = usePoemStore();
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [optimisticBookmarkCount, setOptimisticBookmarkCount] = useState(feedItem.bookmarkCount || 0)
+  const [topicsDialogOpen, setTopicsDialogOpen] = useState(false)
+  const { userData, fetchUserData } = useUserStore()
+  const { bookmarkPoem } = usePoemStore()
 
   useEffect(() => {
     if (userData?._id) {
-      setIsBookmarked(
-        userData.bookmarks?.some(
-          (b) => b.poemId.toString() === feedItem.poemId
-        ) || false
-      );
+      setIsBookmarked(userData.bookmarks?.some((b) => b.poemId.toString() === feedItem.poemId) || false)
     } else {
-      setIsBookmarked(false);
+      setIsBookmarked(false)
     }
-    setOptimisticBookmarkCount(feedItem.bookmarkCount || 0);
-  }, [userData, feedItem]);
+    setOptimisticBookmarkCount(feedItem.bookmarkCount || 0)
+  }, [userData, feedItem])
 
-  const poetName = feedItem.poet.name || "Unknown Poet";
-  const poetImage =
-    feedItem.poet.profilePicture?.url || "/placeholder.svg?height=48&width=48";
-  const poetSlug = feedItem.poet.slug || "unknown";
+  const poetName = feedItem.poet.name || "Unknown Poet"
+  const poetImage = feedItem.poet.profilePicture?.url || "/placeholder.svg?height=48&width=48"
+  const poetSlug = feedItem.poet.slug || "unknown"
 
   const formatCouplet = (couplet: string) => {
     return couplet.split("\n").map((line, index) => (
       <div key={index} className="leading-relaxed">
         {line}
       </div>
-    ));
-  };
+    ))
+  }
 
   const handleBookmark = async () => {
     if (!userData?._id) {
-      toast.error("Please log in to bookmark poems");
-      return;
+      toast.error("Please log in to bookmark poems")
+      return
     }
-    setActionLoading("bookmark");
-    const previousBookmarkCount = optimisticBookmarkCount;
-    const previousIsBookmarked = isBookmarked;
-    setOptimisticBookmarkCount(
-      isBookmarked ? optimisticBookmarkCount - 1 : optimisticBookmarkCount + 1
-    );
-    setIsBookmarked(!isBookmarked);
+    setActionLoading("bookmark")
+    const previousBookmarkCount = optimisticBookmarkCount
+    const previousIsBookmarked = isBookmarked
+    setOptimisticBookmarkCount(isBookmarked ? optimisticBookmarkCount - 1 : optimisticBookmarkCount + 1)
+    setIsBookmarked(!isBookmarked)
     try {
-      const result = await bookmarkPoem(
-        feedItem.poemId,
-        userData._id,
-        isBookmarked ? "remove" : "add"
-      );
+      const result = await bookmarkPoem(feedItem.poemId, userData._id, isBookmarked ? "remove" : "add")
       if (result.success) {
-        await fetchUserData();
-        toast.success(
-          isBookmarked ? "Poem removed from bookmarks" : "Poem bookmarked"
-        );
+        await fetchUserData()
+        toast.success(isBookmarked ? "Poem removed from bookmarks" : "Poem bookmarked")
       } else {
-        throw new Error(result.message || "Failed to update bookmark");
+        throw new Error(result.message || "Failed to update bookmark")
       }
     } catch (e: unknown) {
-      console.error("Failed to bookmark poem:", e);
-      toast.error("Failed to bookmark poem");
-      setIsBookmarked(previousIsBookmarked);
-      setOptimisticBookmarkCount(previousBookmarkCount);
+      console.error("Failed to bookmark poem:", e)
+      toast.error("Failed to bookmark poem")
+      setIsBookmarked(previousIsBookmarked)
+      setOptimisticBookmarkCount(previousBookmarkCount)
     } finally {
-      setActionLoading(null);
+      setActionLoading(null)
     }
-  };
+  }
 
   const handleShare = () => {
     if (navigator.share) {
@@ -101,27 +80,25 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
         title: `Poem by ${poetName}`,
         text: feedItem.couplet,
         url: `/poems/${feedItem.language}/${feedItem.slug}`,
-      });
+      })
     } else {
-      navigator.clipboard.writeText(
-        `${window.location.origin}/poems/${feedItem.language}/${feedItem.slug}`
-      );
-      toast.success("Poem link copied to clipboard");
+      navigator.clipboard.writeText(`${window.location.origin}/poems/${feedItem.language}/${feedItem.slug}`)
+      toast.success("Poem link copied to clipboard")
     }
-  };
+  }
 
-  const isUrdu = feedItem.language === "ur";
-  const textDirection = isUrdu ? "rtl" : "ltr";
-  const fontClass = isUrdu ? "font-noto-nastaliq" : "font-inter";
+  const isUrdu = feedItem.language === "ur"
+  const textDirection = isUrdu ? "rtl" : "ltr"
+  const fontClass = isUrdu ? "font-noto-nastaliq" : "font-inter"
 
   return (
-    <article className="group relative rounded-3xl border border-border/40 overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-lg hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-2 hover:scale-[1.02]">
+    <article className="group relative rounded-3xl border border-border/40 overflow-hidden bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm shadow-lg hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-2 hover:scale-[1.02] max-w-full">
       {/* Decorative gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
       {/* Header */}
-      <div className="relative flex items-center justify-between gap-4 p-6 border-b border-border/20">
-        <div className="flex items-center gap-4">
+      <div className="relative flex flex-wrap items-center justify-between gap-4 p-4 sm:p-6 border-b border-border/20">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="relative flex-shrink-0">
             <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 overflow-hidden ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all duration-300 shadow-lg">
               <Image
@@ -132,7 +109,7 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 loading="lazy"
                 onError={(e) => {
-                  e.currentTarget.src = "/placeholder.svg?height=56&width=56";
+                  e.currentTarget.src = "/placeholder.svg?height=56&width=56"
                 }}
               />
             </div>
@@ -140,35 +117,28 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
               <Sparkles className="h-3 w-3 text-primary-foreground" />
             </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <Link href={`/poets/${poetSlug}`}>
+          <div className="flex-1 min-w-0 max-w-[calc(100%-70px)]">
+            <Link href={`/poet/${poetSlug}`}>
               <h3 className="font-bold text-lg truncate group-hover:text-primary transition-colors duration-300">
                 {poetName}
               </h3>
             </Link>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="text-muted-foreground/80 font-medium">
-                @{poetSlug}
-              </span>
+              <span className="text-muted-foreground/80 font-medium truncate">@{poetSlug}</span>
             </div>
           </div>
         </div>
         <div className="text-sm text-muted-foreground font-medium font-inter bg-muted/30 px-3 py-1 rounded-full">
-          {feedItem.createdAt
-            ? formatRelativeTime(feedItem.createdAt)
-            : "Unknown"}
+          {feedItem.createdAt ? formatRelativeTime(feedItem.createdAt) : "Unknown"}
         </div>
       </div>
 
       {/* Couplet with stylish vertical line */}
-      <div className="relative p-6">
-        <Link
-          href={`/poems/${feedItem.language}/${feedItem.slug}`}
-          className="block group/link"
-        >
+      <div className="relative p-4 sm:p-6">
+        <Link href={`/poems/${feedItem.language}/${feedItem.slug}`} className="block group/link">
           <div className="relative mb-6">
             <div
-              className={`relative ${isUrdu ? "pr-6" : "pl-6"} ${fontClass}`}
+              className={`relative ${isUrdu ? "pr-6" : "pl-6"} ${fontClass} overflow-hidden`}
               dir={textDirection}
               lang={isUrdu ? "ur" : "en"}
             >
@@ -193,10 +163,7 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
 
         {/* Cover Image */}
         {feedItem.coverImage?.url && (
-          <Link
-            href={`/poems/${feedItem.language}/${feedItem.slug}`}
-            className="block mb-6"
-          >
+          <Link href={`/poems/${feedItem.language}/${feedItem.slug}`} className="block mb-6">
             <div className="relative h-52 md:h-64 bg-muted/30 rounded-2xl overflow-hidden group-hover:shadow-xl transition-all duration-500 border border-border/20">
               <Image
                 src={feedItem.coverImage.url || "/placeholder.svg"}
@@ -225,10 +192,7 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
                 </Badge>
               ))}
               {feedItem.topics.length > 2 && (
-                <Dialog
-                  open={topicsDialogOpen}
-                  onOpenChange={setTopicsDialogOpen}
-                >
+                <Dialog open={topicsDialogOpen} onOpenChange={setTopicsDialogOpen}>
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
@@ -265,14 +229,12 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
       </div>
 
       {/* Action Bar */}
-      <div className="relative flex items-center border-t border-border/20 bg-gradient-to-r from-muted/30 to-muted/10 backdrop-blur-sm px-6 py-4">
+      <div className="relative flex items-center border-t border-border/20 bg-gradient-to-r from-muted/30 to-muted/10 backdrop-blur-sm px-3 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1">
             <button
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 hover:bg-background/60 hover:shadow-md ${
-                isBookmarked
-                  ? "text-primary bg-primary/15 shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-xl transition-all duration-300 hover:bg-background/60 hover:shadow-md ${
+                isBookmarked ? "text-primary bg-primary/15 shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={handleBookmark}
               disabled={actionLoading === "bookmark"}
@@ -281,21 +243,15 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-primary border-muted" />
               ) : (
                 <Bookmark
-                  className={`h-4 w-4 transition-all duration-300 ${
-                    isBookmarked ? "fill-current scale-110" : ""
-                  }`}
+                  className={`h-4 w-4 transition-all duration-300 ${isBookmarked ? "fill-current scale-110" : ""}`}
                 />
               )}
-              <span className="text-sm font-semibold font-inter">
-                {optimisticBookmarkCount.toLocaleString()}
-              </span>
+              <span className="text-sm font-semibold font-inter">{optimisticBookmarkCount.toLocaleString()}</span>
             </button>
 
             <div className="flex items-center gap-2 px-4 py-2 text-muted-foreground">
               <Eye className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-semibold font-inter">
-                {(feedItem.viewsCount || 0).toLocaleString()}
-              </span>
+              <span className="text-sm font-semibold font-inter">{(feedItem.viewsCount || 0).toLocaleString()}</span>
             </div>
           </div>
 
@@ -304,9 +260,7 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
             onClick={handleShare}
           >
             <Share2 className="h-4 w-4" />
-            <span className="text-sm font-semibold font-inter hidden sm:inline">
-              Share
-            </span>
+            <span className="text-sm font-semibold font-inter hidden sm:inline">Share</span>
           </button>
         </div>
       </div>
@@ -315,6 +269,9 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
         .poetry-preview {
           line-height: 2.4;
           letter-spacing: 0.02em;
+          overflow-wrap: break-word;
+          word-wrap: break-word;
+          word-break: break-word;
         }
         .font-noto-nastaliq {
           font-family: var(--font-noto-nastaliq), "Noto Nastaliq Urdu",
@@ -326,5 +283,5 @@ export default function PoemCard({ feedItem }: PoemCardProps) {
         }
       `}</style>
     </article>
-  );
+  )
 }
