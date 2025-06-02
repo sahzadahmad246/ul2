@@ -143,7 +143,7 @@ export function Explore() {
                         className="overflow-hidden hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 border-border/50 hover:border-primary/20"
                       >
                         <CardContent className="p-3">
-                          <Link href={`/poems/${poem.slug.en}`} className="block group">
+                          <Link href={`/poems/en/${poem.slug.en}`} className="block group">
                             <div className="relative pl-3 sm:pl-4 py-2">
                               {/* Enhanced vertical gradient line */}
                               <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-primary/60 to-primary/20 rounded-full group-hover:from-primary group-hover:via-primary/80 group-hover:to-primary/40 transition-all duration-300" />
@@ -316,7 +316,7 @@ export function Explore() {
                           className="overflow-hidden hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 border-border/50 hover:border-primary/20"
                         >
                           <CardContent className="p-3">
-                            <Link href={`/poems/${poem.slug.en}`} className="block group">
+                            <Link href={`/poems/en/${poem.slug.en}`} className="block group">
                               <div className="relative pl-3 sm:pl-4 py-1.5 sm:py-2">
                                 {/* Enhanced vertical gradient line */}
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-primary/60 to-primary/20 rounded-full group-hover:from-primary group-hover:via-primary/80 group-hover:to-primary/40 transition-all duration-300" />
@@ -520,7 +520,7 @@ export function Explore() {
                               </div>
                             </div>
 
-                            <Link href={`/poems/${poem.slug.en}`} className="block group">
+                            <Link href={`/poems/en/${poem.slug.en}`} className="block group">
                               <div className="relative pl-3 sm:pl-4 py-1.5 sm:py-2">
                                 {/* Enhanced vertical gradient line */}
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary via-primary/60 to-primary/20 rounded-full group-hover:from-primary group-hover:via-primary/80 group-hover:to-primary/40 transition-all duration-300" />
