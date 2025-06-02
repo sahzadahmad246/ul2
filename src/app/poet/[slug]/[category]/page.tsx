@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import PoetProfileLayout from "@/components/poets/poet-profile-layout";
 import PoetWorksContent from "@/components/poets/poet-works-content";
 import { generatePoemCollectionStructuredData } from "@/lib/structured-data";
+import dbConnect from "@/lib/mongodb";
+import User from "@/models/User";
 
 interface PageProps {
   params: Promise<{ slug: string; category: string }>;
@@ -39,9 +41,11 @@ async function getPoet(slug: string) {
       }
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return null;
+    }
     return await response.json();
-  } catch  {
+  } catch {
     return null;
   }
 }
@@ -65,8 +69,7 @@ async function getPoetWorks(
     }
 
     return await response.json();
-  } catch (error) {
-    console.error("Error fetching poet works:", error);
+  } catch {
     return null;
   }
 }
@@ -76,7 +79,13 @@ export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
   const { slug, category } = await params;
-  const { page } = await searchParams;
+  let page;
+  try {
+    const resolvedSearchParams = await searchParams;
+    page = resolvedSearchParams.page;
+  } catch {
+    page = "1";
+  }
 
   if (!validCategories.includes(category)) {
     return {
@@ -147,12 +156,46 @@ export async function generateMetadata({
   };
 }
 
+// Enable ISR with 1-hour revalidation
+export const revalidate = 3600;
+// Allow dynamic slugs not pre-generated
+export const dynamicParams = true;
+
+export async function generateStaticParams() {
+  try {
+    await dbConnect();
+    const poets = await User.find().select("slug").lean();
+    const slugs = poets.map((poet) => poet.slug);
+
+    return slugs.flatMap((slug) =>
+      validCategories.map((category) => ({
+        slug,
+        category,
+      }))
+    );
+  } catch {
+    // Fallback to a minimal set of paths if database is unavailable
+    return validCategories.map((category) => ({
+      slug: "default",
+      category,
+    }));
+  }
+}
+
 export default async function PoetCategoryPage({
   params,
   searchParams,
 }: PageProps) {
   const { slug, category } = await params;
-  const { page, sortBy } = await searchParams;
+  let page, sortBy;
+  try {
+    const resolvedSearchParams = await searchParams;
+    page = resolvedSearchParams.page;
+    sortBy = resolvedSearchParams.sortBy;
+  } catch {
+    page = "1";
+    sortBy = "recent";
+  }
 
   if (!validCategories.includes(category)) {
     notFound();
@@ -168,7 +211,13 @@ export default async function PoetCategoryPage({
   const worksData = await getPoetWorks(slug, category, pageNum, sortOption);
 
   if (!worksData) {
-    notFound();
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">
+          Unable to load works for this category. Please try again later.
+        </p>
+      </div>
+    );
   }
 
   const structuredData = generatePoemCollectionStructuredData(
@@ -194,11 +243,4 @@ export default async function PoetCategoryPage({
       </PoetProfileLayout>
     </>
   );
-}
-
-export async function generateStaticParams() {
-  // Generate static params for common categories
-  return validCategories.map((category) => ({
-    category,
-  }));
 }

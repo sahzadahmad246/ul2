@@ -79,7 +79,7 @@ export async function generateMetadata({
     "";
   const keywords = poem.topics.join(", ");
   const image = poem.coverImage?.url || "/default-og-image.jpg";
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://yourdomain.com";
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://unmatchedlines.com";
 
   return {
     title,
@@ -135,7 +135,7 @@ export default async function PoemPage({ params }: PoemPageProps) {
   }
 
   const serializedPoem = serializePoem(poem);
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://yourdomain.com";
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://unmatchedlines.com";
 
   // Structured Data (CreativeWork + BreadcrumbList)
   const structuredData = [
