@@ -1,4 +1,3 @@
-// src/store/poem-store.ts
 "use client";
 
 import { create } from "zustand";
@@ -9,16 +8,28 @@ interface Pagination {
   limit: number;
   total: number;
   pages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 interface PoemState {
   poems: SerializedPoem[];
   poem: SerializedPoem | null;
+  poetWorks: Record<string, SerializedPoem[]>; // poetSlug -> poems
   pagination: Pagination | null;
+  poetPagination: Record<string, Pagination>; // poetSlug -> pagination
   loading: boolean;
+  poetLoading: Record<string, boolean>; // poetSlug -> loading state
   error: string | null;
-  fetchPoems: (page?: number, limit?: number) => Promise<void>;
+  fetchPoems: (page?: number, limit?: number, category?: string) => Promise<void>;
   fetchPoemByIdOrSlug: (identifier: string) => Promise<void>;
+  fetchPoetWorks: (
+    poetSlug: string,
+    category: string,
+    page?: number,
+    limit?: number,
+    sortBy?: string,
+  ) => Promise<void>;
   createPoem: (data: FormData) => Promise<{ success: boolean; message?: string; poem?: SerializedPoem }>;
   updatePoem: (identifier: string, data: FormData) => Promise<{ success: boolean; message?: string; poem?: SerializedPoem }>;
   deletePoem: (identifier: string) => Promise<{ success: boolean; message?: string }>;
@@ -32,15 +43,18 @@ interface PoemState {
 export const usePoemStore = create<PoemState>((set) => ({
   poems: [],
   poem: null,
+  poetWorks: {},
   pagination: null,
+  poetPagination: {},
   loading: false,
+  poetLoading: {},
   error: null,
 
   // Fetch all published poems with pagination
-  fetchPoems: async (page = 1, limit = 10) => {
+  fetchPoems: async (page = 1, limit = 10, category = "all") => {
     try {
       set({ loading: true, error: null });
-      const response = await fetch(`/api/poems?page=${page}&limit=${limit}`);
+      const response = await fetch(`/api/poems?page=${page}&limit=${limit}&category=${category}`);
       if (!response.ok) {
         throw new Error("Failed to fetch poems");
       }
@@ -74,6 +88,40 @@ export const usePoemStore = create<PoemState>((set) => ({
       }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "Unknown error", loading: false });
+    }
+  },
+
+  // Fetch poems by a specific poet
+  fetchPoetWorks: async (poetSlug: string, category: string, page = 1, limit = 3, sortBy = "recent") => {
+    try {
+      set((state) => ({
+        poetLoading: { ...state.poetLoading, [poetSlug]: true },
+        error: null,
+      }));
+      const response = await fetch(
+        `/api/poet/${poetSlug}/works?category=${category}&page=${page}&limit=${limit}&sortBy=${sortBy}`,
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to fetch poet works (status: ${response.status})`);
+      }
+      const { poems, pagination } = await response.json();
+      set((state) => ({
+        poetWorks: {
+          ...state.poetWorks,
+          [poetSlug]: page === 1 ? poems : [...(state.poetWorks[poetSlug] || []), ...poems],
+        },
+        poetPagination: {
+          ...state.poetPagination,
+          [poetSlug]: pagination,
+        },
+        poetLoading: { ...state.poetLoading, [poetSlug]: false },
+      }));
+    } catch (error) {
+      set((state) => ({
+        error: error instanceof Error ? error.message : "Unknown error",
+        poetLoading: { ...state.poetLoading, [poetSlug]: false },
+      }));
     }
   },
 
@@ -119,6 +167,15 @@ export const usePoemStore = create<PoemState>((set) => ({
             poem._id === result.poem._id ? updatedPoem : poem
           ),
           poem: state.poem?._id === result.poem._id ? updatedPoem : state.poem,
+          poetWorks: Object.keys(state.poetWorks).reduce(
+            (acc, poetSlug) => ({
+              ...acc,
+              [poetSlug]: state.poetWorks[poetSlug].map((poem) =>
+                poem._id === result.poem._id ? updatedPoem : poem
+              ),
+            }),
+            {}
+          ),
           loading: false,
         }));
         return { success: true, poem: updatedPoem };
@@ -156,6 +213,19 @@ export const usePoemStore = create<PoemState>((set) => ({
             state.poem?.slug.ur === identifier
               ? null
               : state.poem,
+          poetWorks: Object.keys(state.poetWorks).reduce(
+            (acc, poetSlug) => ({
+              ...acc,
+              [poetSlug]: state.poetWorks[poetSlug].filter(
+                (poem) =>
+                  poem._id !== identifier &&
+                  poem.slug.en !== identifier &&
+                  poem.slug.hi !== identifier &&
+                  poem.slug.ur !== identifier
+              ),
+            }),
+            {}
+          ),
           loading: false,
         }));
         return { success: true };
@@ -205,6 +275,26 @@ export const usePoemStore = create<PoemState>((set) => ({
                 bookmarkCount: action === "add" ? state.poem.bookmarkCount + 1 : state.poem.bookmarkCount - 1,
               }
             : state.poem,
+          poetWorks: Object.keys(state.poetWorks).reduce(
+            (acc, poetSlug) => ({
+              ...acc,
+              [poetSlug]: state.poetWorks[poetSlug].map((poem) => {
+                if (poem._id === poemId) {
+                  const updatedBookmarks =
+                    action === "add"
+                      ? [...poem.bookmarks, { userId, bookmarkedAt: new Date().toISOString() }]
+                      : poem.bookmarks.filter((b) => b.userId !== userId);
+                  return {
+                    ...poem,
+                    bookmarks: updatedBookmarks,
+                    bookmarkCount: updatedBookmarks.length,
+                  };
+                }
+                return poem;
+              }),
+            }),
+            {}
+          ),
           loading: false,
         }));
         return { success: true };
@@ -228,5 +318,5 @@ export const usePoemStore = create<PoemState>((set) => ({
   clearPoem: () => set({ poem: null, error: null, loading: false }),
 
   // Clear all poems state
-  clearPoems: () => set({ poems: [], pagination: null, error: null, loading: false }),
+  clearPoems: () => set({ poems: [], poetWorks: {}, pagination: null, poetPagination: {}, error: null, loading: false }),
 }));

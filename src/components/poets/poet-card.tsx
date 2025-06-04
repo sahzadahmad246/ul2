@@ -16,7 +16,7 @@ export default function PoetCard({ poet }: PoetCardProps) {
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-border bg-card overflow-hidden">
       <CardContent className="p-0">
-        <div className="flex items-center p-4 relative">
+        <div className="flex items-center px-4 relative">
           {/* Profile Picture */}
           <div className="relative mr-4">
             <Avatar className="h-16 w-16 ring-2 ring-primary/10 group-hover:ring-primary/20 transition-all">

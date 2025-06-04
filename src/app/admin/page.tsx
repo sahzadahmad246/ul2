@@ -36,36 +36,44 @@ export default function AdminDashboard() {
     fetchPoems(1, 100)
   }, [fetchAllUsers, fetchPoems])
 
-  useEffect(() => {
-    if (users.length > 0 || poems.length > 0) {
-      // Convert SerializedPoem[] to IPoem[]
-      const convertedPoems: IPoem[] = poems.map((poem: SerializedPoem): IPoem => ({
-        ...poem,
-        createdAt: new Date(poem.createdAt),
-        updatedAt: new Date(poem.updatedAt),
-        bookmarks: poem.bookmarks.map(bookmark => ({
-          ...bookmark,
-          bookmarkedAt: new Date(bookmark.bookmarkedAt),
-        })),
-      }))
+ useEffect(() => {
+  // Ensure poems and users are defined before processing
+  if (!poems || !users) return;
 
-      const totalViews = convertedPoems.reduce((sum, poem) => sum + (poem.viewsCount || 0), 0)
-      const recentUsers: IUser[] = users
-        .sort((a: IUser, b: IUser) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5)
-      const recentPoems: IPoem[] = convertedPoems
-        .sort((a: IPoem, b: IPoem) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5)
+  try {
+    // Convert SerializedPoem[] to IPoem[]
+    const convertedPoems: IPoem[] = (poems || []).map((poem: SerializedPoem): IPoem => ({
+      ...poem,
+      createdAt: new Date(poem.createdAt),
+      updatedAt: new Date(poem.updatedAt),
+      bookmarks: (poem.bookmarks || []).map(bookmark => ({
+        ...bookmark,
+        bookmarkedAt: new Date(bookmark.bookmarkedAt),
+      })),
+    }));
 
-      setStats({
-        totalUsers: users.length,
-        totalPoems: convertedPoems.length,
-        totalViews,
-        recentUsers,
-        recentPoems,
-      })
-    }
-  }, [users, poems])
+    const totalViews = convertedPoems.reduce((sum, poem) => sum + (poem.viewsCount || 0), 0);
+    
+    const recentUsers: IUser[] = (users || [])
+      .sort((a: IUser, b: IUser) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+      
+    const recentPoems: IPoem[] = convertedPoems
+      .sort((a: IPoem, b: IPoem) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
+    setStats({
+      totalUsers: users.length,
+      totalPoems: convertedPoems.length,
+      totalViews,
+      recentUsers,
+      recentPoems,
+    });
+  } catch (error) {
+    console.error("Error processing dashboard data:", error);
+    // Optionally set some error state here
+  }
+}, [users, poems]);
 
   const roleStats = users.reduce(
     (acc, user: IUser) => {

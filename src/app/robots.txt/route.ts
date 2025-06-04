@@ -2,10 +2,11 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://yourdomain.com";
+  const baseUrl = "https://unmatchedlines.com";
   const content = `
 User-agent: *
 Allow: /
+Allow: /poet/
 Allow: /poems/
 Disallow: /api/
 Disallow: /admin/

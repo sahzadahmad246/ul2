@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, X, Trash2, Search, Clock, ArrowRight } from "lucide-react"
 
-
 interface SearchBarProps {
   onSearch: (query: string) => void
   initialQuery: string
@@ -27,7 +26,6 @@ export function SearchBar({ onSearch, initialQuery, loading }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
-  
 
   // Hydrate search history on client mount
   useEffect(() => {
@@ -90,6 +88,9 @@ export function SearchBar({ onSearch, initialQuery, loading }: SearchBarProps) {
     handleSearch()
   }
 
+  // Show search history only when input is focused and empty
+  const showSearchHistory = isFocused && searchHistory.length > 0 && !searchInput.trim()
+
   return (
     <div className="relative mb-4">
       <form onSubmit={handleSubmit}>
@@ -114,7 +115,7 @@ export function SearchBar({ onSearch, initialQuery, loading }: SearchBarProps) {
               className="absolute right-11 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               disabled={loading}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+              <X className="h-4 w-4" />
             </button>
           )}
           <Button
@@ -128,7 +129,7 @@ export function SearchBar({ onSearch, initialQuery, loading }: SearchBarProps) {
         </div>
       </form>
 
-      {isFocused && searchHistory.length > 0 && (
+      {showSearchHistory && (
         <div
           ref={historyRef}
           className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-lg max-h-80 overflow-auto z-10"

@@ -24,16 +24,16 @@ export default function PoemsPage() {
     fetchPoems(1, 100)
   }, [fetchPoems])
 
-  // Convert SerializedPoem[] to IPoem[]
-  const convertedPoems: IPoem[] = poems.map((poem: SerializedPoem): IPoem => ({
-    ...poem,
-    createdAt: new Date(poem.createdAt),
-    updatedAt: new Date(poem.updatedAt),
-    bookmarks: poem.bookmarks.map(bookmark => ({
-      ...bookmark,
-      bookmarkedAt: new Date(bookmark.bookmarkedAt),
-    })),
-  }))
+  // Convert SerializedPoem[] to IPoem[] with safe null checks
+const convertedPoems: IPoem[] = (poems || []).map((poem: SerializedPoem): IPoem => ({
+  ...poem,
+  createdAt: new Date(poem.createdAt),
+  updatedAt: new Date(poem.updatedAt),
+  bookmarks: (poem.bookmarks || []).map(bookmark => ({
+    ...bookmark,
+    bookmarkedAt: new Date(bookmark.bookmarkedAt),
+  })),
+}));
 
   const filteredPoems = convertedPoems.filter((poem: IPoem) => {
     const matchesSearch =

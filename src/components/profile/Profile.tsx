@@ -59,7 +59,7 @@ export default function Profile() {
       </div>
 
       {/* Profile Content */}
-      <div className="max-w-2xl mx-auto px-4 pb-8">
+      <div className="max-w-2xl mx-auto px-2 pb-8">
         <ProfileHeader userData={userData} onBack={() => router.back()} onLogout={() => setShowLogoutDialog(true)} />
 
         <ProfileContent userData={userData} />

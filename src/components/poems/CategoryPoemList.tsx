@@ -1,83 +1,83 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, useCallback } from "react"
-import { useFeedStore } from "@/store/feed-store"
-import PoemCard from "./PoemCard"
-import PoemListSkeleton from "./PoemListSkelton"
-import { Button } from "@/components/ui/button"
-import { Loader2, RefreshCw, AlertCircle, BookOpen, Sparkles, Heart } from "lucide-react"
-import type { FeedItem, Pagination } from "@/types/poemTypes"
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useCategoryFeedStore } from "@/store/category-poem-store"; 
+import PoemCard from "./PoemCard";
+import PoemListSkeleton from "./PoemListSkelton";
+import { Button } from "@/components/ui/button";
+import { Loader2, RefreshCw, AlertCircle, BookOpen, Sparkles, Heart } from "lucide-react";
+import type { FeedItem, Pagination } from "@/types/poemTypes";
 
-interface EnhancedPoemListProps {
-  initialFeedItems: FeedItem[]
-  initialPagination: Pagination
+interface CategoryPoemListProps {
+  initialFeedItems: FeedItem[];
+  initialPagination: Pagination;
+  category: string;
 }
 
-export default function EnhancedPoemList({ initialFeedItems, initialPagination }: EnhancedPoemListProps) {
-  const { feedItems, setFeedItems, loading, fetchFeed, pagination, setPagination } = useFeedStore()
-  const observerRef = useRef<IntersectionObserver | null>(null)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
+export default function CategoryPoemList({ initialFeedItems, initialPagination, category }: CategoryPoemListProps) {
+  const { feedItems, setFeedItems, loading, fetchCategoryFeed, pagination, setPagination } = useCategoryFeedStore();
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
-      setFeedItems(initialFeedItems)
-      setPagination(initialPagination)
-      setIsInitialized(true)
+      setFeedItems(initialFeedItems);
+      setPagination(initialPagination);
+      setIsInitialized(true);
     }
-  }, [initialFeedItems, initialPagination, setFeedItems, setPagination, isInitialized])
+  }, [initialFeedItems, initialPagination, setFeedItems, setPagination, isInitialized]);
 
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries
+      const [entry] = entries;
       if (entry.isIntersecting && pagination && pagination.page < pagination.pages && !loading && !error) {
-        fetchFeed(pagination.page + 1).catch((err) => {
-          setError("Failed to load more poems. Please try again.")
-          console.error("Error fetching more poems:", err)
-        })
+        fetchCategoryFeed(category, pagination.page + 1).catch((err) => {
+          setError("Failed to load more poems. Please try again.");
+          console.error("Error fetching more poems:", err);
+        });
       }
     },
-    [pagination, loading, fetchFeed, error],
-  )
+    [pagination, loading, fetchCategoryFeed, error, category],
+  );
 
   useEffect(() => {
-    const currentLoadMoreRef = loadMoreRef.current
+    const currentLoadMoreRef = loadMoreRef.current;
 
-    if (!pagination || loading || error) return
+    if (!pagination || loading || error) return;
 
     if (observerRef.current) {
-      observerRef.current.disconnect()
+      observerRef.current.disconnect();
     }
 
     observerRef.current = new IntersectionObserver(handleIntersection, {
       threshold: 0.1,
       rootMargin: "100px",
-    })
+    });
 
     if (currentLoadMoreRef && observerRef.current) {
-      observerRef.current.observe(currentLoadMoreRef)
+      observerRef.current.observe(currentLoadMoreRef);
     }
 
     return () => {
       if (observerRef.current) {
-        observerRef.current.disconnect()
+        observerRef.current.disconnect();
       }
-    }
-  }, [pagination, loading, error, handleIntersection])
+    };
+  }, [pagination, loading, error, handleIntersection]);
 
   const handleRetry = () => {
-    setError(null)
+    setError(null);
     if (pagination) {
-      fetchFeed(pagination.page + 1)
+      fetchCategoryFeed(category, pagination.page + 1);
     } else {
-      fetchFeed(1)
+      fetchCategoryFeed(category, 1);
     }
-  }
+  };
 
-  // Show skeleton when loading and no items are available
   if (loading && feedItems.length === 0 && !error && isInitialized) {
-    return <PoemListSkeleton count={6} />
+    return <PoemListSkeleton count={6} />;
   }
 
   if (error) {
@@ -102,7 +102,7 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (feedItems.length === 0 && !loading && isInitialized) {
@@ -117,9 +117,11 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
             <Heart className="absolute bottom-2 left-1/3 h-4 sm:h-5 w-4 sm:w-5 text-accent/60 animate-pulse delay-300" />
           </div>
           <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-2xl sm:text-3xl font-bold text-foreground">No poems yet</h3>
+            <h3 className="text-2xl sm:text-3xl font-bold text-foreground">
+              No {category.charAt(0).toUpperCase() + category.slice(1)} poems yet
+            </h3>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-              Be the first to share your poetry with the world and inspire others with your beautiful words.
+              Be the first to share your {category} poetry with the world.
             </p>
           </div>
           <div className="pt-4">
@@ -132,7 +134,7 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -152,14 +154,12 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
         ))}
       </div>
 
-      {/* Loading more items skeleton */}
       {loading && feedItems.length > 0 && (
         <div className="space-y-6 md:space-y-4">
           <PoemListSkeleton count={3} />
         </div>
       )}
 
-      {/* Traditional loading indicator for when fetching more */}
       {loading && feedItems.length > 0 && (
         <div className="flex flex-col items-center justify-center py-8 sm:py-16 space-y-4 sm:space-y-6">
           <div className="relative">
@@ -171,7 +171,7 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
             </div>
           </div>
           <p className="text-base sm:text-lg text-muted-foreground animate-pulse font-medium">
-            Loading more beautiful poetry...
+            Loading more {category} poetry...
           </p>
         </div>
       )}
@@ -189,7 +189,7 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
           <div className="space-y-2 sm:space-y-3">
             <p className="text-xl sm:text-2xl font-bold text-foreground">You have reached the end!</p>
             <p className="text-muted-foreground text-base sm:text-lg">
-              You have explored all {feedItems.length} beautiful poems in our feed.
+              You have explored all {feedItems.length} beautiful {category} poems.
             </p>
           </div>
           <div className="pt-4">
@@ -203,5 +203,5 @@ export default function EnhancedPoemList({ initialFeedItems, initialPagination }
         </div>
       )}
     </div>
-  )
+  );
 }

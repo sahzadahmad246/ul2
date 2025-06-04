@@ -59,14 +59,11 @@ export async function PUT(
   try {
     const params = await context.params;
     const { identifier } = params;
-    console.log("PUT request received for identifier:", identifier); // Debug log
 
     await dbConnect();
-    console.log("Database connected");
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      console.log("Unauthorized: No session or user ID found");
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -75,7 +72,6 @@ export async function PUT(
       !currentUser ||
       (currentUser.role !== "poet" && currentUser.role !== "admin")
     ) {
-      console.log("Forbidden: User role is", currentUser?.role || "none");
       return NextResponse.json(
         { message: "Forbidden: Only poets or admins can update poems" },
         { status: 403 }
@@ -89,21 +85,14 @@ export async function PUT(
         { "slug.ur": identifier },
       ],
     });
-    console.log("Poem query result:", poem); // Debug log
+
     if (!poem) {
-      console.log("Poem not found for identifier:", identifier);
       return NextResponse.json({ message: "Poem not found" }, { status: 404 });
     }
-    
+
     // Check if the user is authorized to update this poem
     if (currentUser.role === "poet") {
       if (!poem.poet || poem.poet._id.toString() !== session.user.id) {
-        console.log(
-          "Forbidden: User ID",
-          session.user.id,
-          "does not match poem poet ID",
-          poem.poet ? poem.poet._id.toString() : "null"
-        );
         return NextResponse.json(
           { message: "Forbidden: You can only update your own poems" },
           { status: 403 }
@@ -124,7 +113,6 @@ export async function PUT(
         typeof titleHi !== "string" ||
         typeof titleUr !== "string"
       ) {
-        console.log("Invalid title fields:", { titleEn, titleHi, titleUr });
         return NextResponse.json(
           { message: "Missing or invalid title fields" },
           { status: 400 }
@@ -143,7 +131,6 @@ export async function PUT(
       const value = formData.get(key);
       if (value !== null && value !== undefined) {
         if (typeof value !== "string") {
-          console.log(`Invalid ${key} format:`, value);
           return NextResponse.json(
             { message: `Invalid ${key} format: must be a string` },
             { status: 400 }
@@ -151,8 +138,7 @@ export async function PUT(
         }
         try {
           body[key] = JSON.parse(value);
-        } catch (error) {
-          console.log(`Invalid ${key} JSON format:`, error);
+        } catch {
           return NextResponse.json(
             { message: `Invalid ${key} JSON format` },
             { status: 400 }
@@ -190,7 +176,6 @@ export async function PUT(
       const poetValue = formData.get("poet");
       if (poetValue !== null && poetValue !== undefined) {
         if (typeof poetValue !== "string") {
-          console.log("Invalid poet ID format:", poetValue);
           return NextResponse.json(
             { message: "Invalid poet ID format" },
             { status: 400 }
@@ -199,7 +184,6 @@ export async function PUT(
         poetId = poetValue;
         const poet = await User.findById(poetId);
         if (!poet || poet.role !== "poet") {
-          console.log("Invalid or non-poet user selected:", poetId);
           return NextResponse.json(
             { message: "Invalid or non-poet user selected" },
             { status: 400 }
@@ -212,7 +196,6 @@ export async function PUT(
     const category = formData.get("category");
     if (category !== null && category !== undefined) {
       if (typeof category !== "string") {
-        console.log("Invalid category format:", category);
         return NextResponse.json(
           { message: "Invalid category format" },
           { status: 400 }
@@ -224,7 +207,6 @@ export async function PUT(
     const status = formData.get("status");
     if (status !== null && status !== undefined) {
       if (typeof status !== "string") {
-        console.log("Invalid status format:", status);
         return NextResponse.json(
           { message: "Invalid status format" },
           { status: 400 }
@@ -243,7 +225,7 @@ export async function PUT(
         ],
         _id: { $ne: poem._id },
       }).select("slug");
-      console.log("Existing slugs check:", existingSlugs); // Debug log
+
       if (existingSlugs.length > 0) {
         return NextResponse.json(
           { message: "Slug already exists" },
@@ -267,7 +249,6 @@ export async function PUT(
         try {
           await deleteImage(poem.coverImage.publicId);
         } catch (error) {
-          console.error("Failed to delete previous cover image:", error);
           return NextResponse.json(
             {
               message: "Failed to delete previous cover image",
@@ -308,7 +289,6 @@ export async function PUT(
       .lean();
 
     if (!updatedPoem) {
-      console.log("Failed to update poem with ID:", poem._id);
       return NextResponse.json(
         { message: "Failed to update poem" },
         { status: 500 }
@@ -328,13 +308,12 @@ export async function PUT(
         $inc: { poemCount: 1 },
       });
     }
-    console.log("Poem updated successfully:", updatedPoem);
+
     return NextResponse.json(
       { message: "Poem updated successfully", poem: updatedPoem },
       { status: 200 }
     );
   } catch (error: unknown) {
-    console.error("Error in PUT /api/poems/[identifier]/update:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { message: "Validation error", errors: error.errors },

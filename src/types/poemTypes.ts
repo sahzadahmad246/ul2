@@ -1,6 +1,7 @@
-export interface ProfilePicture {
-  publicId?: string;
+interface ProfilePicture {
   url: string;
+  publicId?: string;
+  alt?: string;
 }
 
 export interface Poet {
@@ -89,6 +90,7 @@ export interface SerializedPoem extends Omit<IPoem, 'createdAt' | 'updatedAt' | 
     ur: Array<ContentItem & { _id?: string }>;
   };
   faqs: Array<FAQ & { _id?: string }>;
+  coverImageAlt?: string;
 }
 
 export interface FeedItem {

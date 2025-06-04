@@ -56,7 +56,7 @@ export default function ProfileContent({ userData }: ProfileContentProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div className="flex items-center gap-3 py-4">
         <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
           <Bookmark className="h-5 w-5 text-white" />

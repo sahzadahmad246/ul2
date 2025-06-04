@@ -25,7 +25,7 @@ export const useUserStore = create<UserState>((set) => ({
         throw new Error("Failed to fetch user data");
       }
       const user = await response.json();
-      console.log("Fetched user data:", user);
+     
       if (user) {
         set({ userData: { ...user, _id: user._id.toString() }, loading: false });
       } else {
